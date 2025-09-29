@@ -1,0 +1,6 @@
+package sk.zzs.vehicle.management.enumer;
+
+// Example: ACTIVE, RESERVE, DEREGISTERED, TEMP_DEREGISTERED, PREREGISTERED
+public enum VehicleStatus {
+    ACTIVE, RESERVE, DEREGISTERED, TEMP_DEREGISTERED, PREREGISTERED
+}
