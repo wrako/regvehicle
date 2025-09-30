@@ -20,11 +20,6 @@ public class ProviderMapper {
                 .providerId(provider.getProviderId())
                 .name(provider.getName())
                 .address(provider.getAddress())
-                .networkPoints(provider.getNetworkPoints() != null
-                    ? provider.getNetworkPoints().stream()
-                        .map(networkPointMapper::toDtoWithoutProvider)
-                        .collect(Collectors.toList())
-                    : null)
                 .build();
     }
 

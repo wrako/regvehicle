@@ -4,13 +4,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
+import { FormCard, FormActions } from "@/components/common";
+import { API_BASE } from "@/constants/api";
 
 const schema = z.object({
     model: z.string().min(1, "Model je povinný."),
@@ -39,43 +37,34 @@ export function NewRdstDeviceForm() {
     }
 
     return (
-        <Card className="p-6">
-            <CardHeader className="p-0 mb-4">
-                <CardTitle>RDST Device</CardTitle>
-                <CardDescription>Enter the details for the new RDST device</CardDescription>
-            </CardHeader>
-            <CardContent className="p-0">
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
-                        <FormField
-                            control={form.control}
-                            name="model"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Model *</FormLabel>
-                                    <FormControl><Input placeholder="Motorola MTM" {...field} /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="rdstId"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>RDST ID *</FormLabel>
-                                    <FormControl><Input placeholder="MTM1001" {...field} /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <div className="flex justify-end gap-2 pt-2">
-                            <Button type="button" variant="outline" onClick={() => history.back()}>Cancel</Button>
-                            <Button type="submit">Save</Button>
-                        </div>
-                    </form>
-                </Form>
-            </CardContent>
-        </Card>
+        <FormCard title="RDST Device" description="Enter the details for the new RDST device">
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
+                    <FormField
+                        control={form.control}
+                        name="model"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Model *</FormLabel>
+                                <FormControl><Input placeholder="Motorola MTM" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="rdstId"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>RDST ID *</FormLabel>
+                                <FormControl><Input placeholder="MTM1001" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormActions submitText="Save" cancelText="Cancel" className="flex justify-end gap-2 pt-2" />
+                </form>
+            </Form>
+        </FormCard>
     );
 }

@@ -70,11 +70,23 @@ export async function unarchiveVehicle(id: number, status: VehicleStatus) {
     return (await res.json()) as Vehicle;
 }
 
+
 // Provider API functions
 export async function getProvider(id: number) {
     const res = await fetch(`${API_BASE}/providers/${id}`, {
         method: "GET",
         credentials: "include",
+    });
+    ensureOk(res);
+    return await res.json();
+}
+
+export async function createProvider(data: { providerId: string; name: string; address: string }) {
+    const res = await fetch(`${API_BASE}/providers`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
     });
     ensureOk(res);
     return await res.json();
@@ -90,6 +102,7 @@ export async function updateProvider(id: number, data: any) {
     ensureOk(res);
     return await res.json();
 }
+
 
 export async function deleteProvider(id: number) {
     const res = await fetch(`${API_BASE}/providers/${id}`, {

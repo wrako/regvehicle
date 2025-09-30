@@ -1,7 +1,6 @@
 "use client";
 
 import { MoreHorizontal } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
     Table,
@@ -18,130 +17,50 @@ import {
     DropdownMenuLabel,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { Vehicle, VehicleStatus } from "@/types";
+import type { Vehicle } from "@/types";
 import { format } from "date-fns";
 import { sk } from "date-fns/locale";
 import Link from "next/link";
 import { useState, useEffect } from "react";
-
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogFooter,
-} from "@/components/ui/dialog";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-
-const API_BASE = "http://localhost:8080";
+import { StatusBadge, EmptyTableState } from "@/components/common";
+import { ArchiveDialog } from "./vehicle-table/ArchiveDialog";
+import { useVehicleActions } from "@/hooks/useVehicleActions";
 
 interface VehicleTableProps {
     vehicles: Vehicle[];
 }
 
-const StatusBadge = ({ status }: { status: VehicleStatus }) => {
-    const statusLabels: Record<VehicleStatus, string> = {
-        aktívne: "Aktívne",
-        rezerva: "Rezerva",
-        vyradené: "Vyradené",
-        "dočasne vyradené": "Dočasne vyradené",
-        preregistrované: "Preregistrované",
-    };
-
-    const variantMap: Record<
-        VehicleStatus,
-        "default" | "secondary" | "destructive" | "outline"
-    > = {
-        aktívne: "default",
-        rezerva: "secondary",
-        vyradené: "destructive",
-        "dočasne vyradené": "outline",
-        preregistrované: "secondary",
-    };
-
-    const variant = variantMap[status];
-    let className =
-        status === "aktívne"
-            ? "bg-green-100 text-green-800 border-green-200 hover:bg-green-200"
-            : "";
-    if (status === "dočasne vyradené") {
-        className += " whitespace-nowrap";
-    }
-
-    return (
-        <Badge variant={variant} className={`capitalize ${className}`}>
-            {statusLabels[status]}
-        </Badge>
-    );
-};
+// StatusBadge moved to common components
 
 export default function VehicleTable({ vehicles }: VehicleTableProps) {
-    // keep a local copy that can be modified after deletes/archives
     const [localVehicles, setLocalVehicles] = useState<Vehicle[]>(vehicles);
+    const {
+        archiveOpen,
+        selectedVehicleId,
+        handleDelete: deleteVehicle,
+        handleArchive,
+        openArchiveDialog,
+        closeArchiveDialog,
+    } = useVehicleActions();
 
-    // sync local state when parent updates
     useEffect(() => {
         setLocalVehicles(vehicles);
     }, [vehicles]);
 
-    const handleDelete = async (id: number) => {
-        if (!confirm("Naozaj chcete vymazať toto vozidlo?")) return;
-        try {
-            const res = await fetch(`${API_BASE}/vehicles/${id}/delete`, {
-                method: "POST",
-            });
-            if (!res.ok) throw new Error(await res.text());
+    const handleDeleteVehicle = async (id: number) => {
+        const success = await deleteVehicle(id);
+        if (success) {
             setLocalVehicles((prev) => prev.filter((v) => v.id !== id.toString()));
-        } catch (err) {
-            console.error("Failed to delete vehicle", err);
-            alert("Nepodarilo sa vymazať vozidlo");
         }
     };
 
-    // --- Archive dialog state ---
-    const [archiveOpen, setArchiveOpen] = useState(false);
-    const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(
-        null
-    );
-    const [archiveStatus, setArchiveStatus] = useState<string>("DOČASNE VYRADENÉ");
-    const [reason, setReason] = useState<string>("");
-
-    const handleArchive = async () => {
-        if (!selectedVehicleId) return;
-        try {
-            const params = new URLSearchParams();
-            params.append(
-                "status",
-                archiveStatus === "DOČASNE VYRADENÉ"
-                    ? "TEMP_DEREGISTERED"
-                    : "DEREGISTERED"
-            );
-            if (reason) params.append("reason", reason);
-
-            const res = await fetch(
-                `${API_BASE}/vehicles/${selectedVehicleId}/archive?${params}`,
-                { method: "POST" }
-            );
-            if (!res.ok) throw new Error(await res.text());
-
-            // remove from table after archiving
-            setLocalVehicles((prev) =>
-                prev.filter((v) => v.id !== selectedVehicleId?.toString())
-            );
-
-            setArchiveOpen(false);
-            setReason("");
-            setArchiveStatus("DOČASNE VYRADENÉ");
-        } catch (e) {
-            console.error("Archive failed", e);
-            alert("Nepodarilo sa archivovať vozidlo");
+    const handleArchiveConfirm = async (status: string, reason: string) => {
+        if (selectedVehicleId === null) return;
+        const success = await handleArchive(selectedVehicleId, status, reason);
+        if (success) {
+            setLocalVehicles((prev) => prev.filter((v) => v.id !== selectedVehicleId.toString()));
+            alert("Vozidlo bolo archivované");
+            closeArchiveDialog();
         }
     };
 
@@ -209,16 +128,13 @@ export default function VehicleTable({ vehicles }: VehicleTableProps) {
                                             </DropdownMenuItem>
 
                                             <DropdownMenuItem
-                                                onClick={() => {
-                                                    setSelectedVehicleId(parseInt(vehicle.id));
-                                                    setArchiveOpen(true);
-                                                }}
+                                                onClick={() => openArchiveDialog(parseInt(vehicle.id))}
                                             >
                                                 Archiv
                                             </DropdownMenuItem>
 
                                             <DropdownMenuItem
-                                                onClick={() => handleDelete(parseInt(vehicle.id))}
+                                                onClick={() => handleDeleteVehicle(parseInt(vehicle.id))}
                                                 className="text-red-600 cursor-pointer"
                                             >
                                                 Vymazať
@@ -229,58 +145,16 @@ export default function VehicleTable({ vehicles }: VehicleTableProps) {
                             </TableRow>
                         ))
                     ) : (
-                        <TableRow>
-                            <TableCell colSpan={7} className="h-24 text-center">
-                                Žiadne vozidlá sa nenašli.
-                            </TableCell>
-                        </TableRow>
+                        <EmptyTableState colSpan={7} message="Žiadne vozidlá sa nenašli." />
                     )}
                 </TableBody>
             </Table>
 
-            {/* Archive Dialog */}
-            <Dialog open={archiveOpen} onOpenChange={setArchiveOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Archivovať vozidlo</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium mb-1">Nový stav</label>
-                            <Select
-                                value={archiveStatus}
-                                onValueChange={setArchiveStatus}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Vyberte stav" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="DOČASNE VYRADENÉ">
-                                        Dočasne vyradené
-                                    </SelectItem>
-                                    <SelectItem value="VYRADENÉ">Vyradené</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-1">
-                                Dôvod (nepovinné)
-                            </label>
-                            <Input
-                                value={reason}
-                                onChange={(e) => setReason(e.target.value)}
-                                placeholder="Zadajte dôvod"
-                            />
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setArchiveOpen(false)}>
-                            Zrušiť
-                        </Button>
-                        <Button onClick={handleArchive}>Archivovať</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            <ArchiveDialog
+                open={archiveOpen}
+                onOpenChange={closeArchiveDialog}
+                onConfirm={handleArchiveConfirm}
+            />
         </div>
     );
 }

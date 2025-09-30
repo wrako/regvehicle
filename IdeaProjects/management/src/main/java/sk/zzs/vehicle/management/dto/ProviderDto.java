@@ -12,5 +12,4 @@ public class ProviderDto {
     private String providerId;
     private String name;
     private String address;
-    private List<NetworkPointDto> networkPoints;
 }
