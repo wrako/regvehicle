@@ -1,32 +1,100 @@
 package sk.zzs.vehicle.management.service;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.server.ResponseStatusException;
+import sk.zzs.vehicle.management.dto.ProviderDto;
+import sk.zzs.vehicle.management.dto.ProviderMapper;
 import sk.zzs.vehicle.management.entity.Provider;
 import sk.zzs.vehicle.management.repository.ProviderRepository;
+import sk.zzs.vehicle.management.repository.VehicleRepository;
+import sk.zzs.vehicle.management.repository.NetworkPointRepository;
 
 import java.util.List;
 
 @Service
+@Transactional
 public class ProviderService {
-    private final ProviderRepository repo;
-    public ProviderService(ProviderRepository repo) { this.repo = repo; }
+    @Autowired
+    private ProviderRepository providerRepository;
 
-    public Provider add(Provider p) { return repo.save(p); }
+    @Autowired
+    private VehicleRepository vehicleRepository;
 
-    public Provider edit(Long id, Provider p) {
-        if (!repo.existsById(id)) throw CrudUtils.notFound("Provider", id);
-        p.setId(id); // ensure path id wins
-        return repo.save(p);
+    @Autowired
+    private NetworkPointRepository networkPointRepository;
+
+    @Autowired
+    private ProviderMapper providerMapper;
+
+    @Transactional(readOnly = true)
+    public List<ProviderDto> getAllProviders() {
+        return providerRepository.findAll()
+                .stream()
+                .map(providerMapper::toDtoWithoutNetworkPoints)
+                .toList();
     }
 
-    public void delete(Long id) {
-        if (!repo.existsById(id)) throw CrudUtils.notFound("Provider", id);
-        repo.deleteById(id);
+    @Transactional(readOnly = true)
+    public ProviderDto getProviderById(Long id) {
+        return providerRepository.findById(id)
+                .map(providerMapper::toDto)
+                .orElseThrow(() -> CrudUtils.notFound("Provider", id));
     }
 
-    public List<Provider> getAll() { return repo.findAll(); }
+    public ProviderDto createProvider(ProviderDto dto) {
+        Provider entity = providerMapper.toEntity(dto);
+        Provider saved = providerRepository.save(entity);
+        return providerMapper.toDto(saved);
+    }
 
+    public ProviderDto updateProvider(Long id, ProviderDto dto) {
+        Provider entity = providerRepository.findById(id)
+                .orElseThrow(() -> CrudUtils.notFound("Provider", id));
+
+        providerMapper.copyToEntity(dto, entity);
+        Provider saved = providerRepository.save(entity);
+        return providerMapper.toDto(saved);
+    }
+
+    public void deleteProvider(Long id) {
+        if (!providerRepository.existsById(id)) {
+            throw CrudUtils.notFound("Provider", id);
+        }
+
+        // Check if provider is referenced by vehicles
+        long vehicleCount = vehicleRepository.countByProviderId(id);
+        if (vehicleCount > 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Cannot delete provider: " + vehicleCount + " vehicles are using this provider");
+        }
+
+        // Check if provider is referenced by network points
+        long networkPointCount = networkPointRepository.countByProviderId(id);
+        if (networkPointCount > 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Cannot delete provider: " + networkPointCount + " network points are using this provider");
+        }
+
+        providerRepository.deleteById(id);
+    }
+
+    // Legacy method for Vehicle service
     public Provider findById(Long id) {
-       return repo.getReferenceById(id);
+        return providerRepository.getReferenceById(id);
     }
+
+
+    public long getProviderVehicles(Long id) {
+        return vehicleRepository.countByProviderId(id);
+    }
+
+    public long getProviderNetworkPoints(Long id) {
+        return networkPointRepository.countByProviderId(id);
+    }
+
 }

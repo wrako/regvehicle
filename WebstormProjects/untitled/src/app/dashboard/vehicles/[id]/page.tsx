@@ -257,38 +257,38 @@ export default function VehicleDetailPage() {
                 </CardContent>
             </Card>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Vybavenie a priradenie</CardTitle>
-                </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <DetailItem label="Sieťový bod" value={vehicle.networkPointName || "-"} />
-                    {/* <DetailItem label="Model RDST" value={rdstDevice?.model || "-"} /> */}
-                    {/* <DetailItem label="ID RDST" value={rdstDevice?.rdstId || "-"} /> */}
-                    {/* <DetailItem label="Model AVL" value={avlDevice?.model || "-"} /> */}
-                    {/* <DetailItem label="ID AVL" value={avlDevice?.communicationId || "-"} /> */}
-                    {vehicle.certificateFilePath && (
-                        <DetailItem
-                            label="Certifikát"
-                            value={
-                                <Button variant="link" asChild className="p-0 h-auto">
-                                    <a
-                                        href={`${API_BASE}/vehicles/file?path=${encodeURIComponent(
-                                            vehicle.certificateFilePath
-                                        )}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center gap-2"
-                                    >
-                                        <FileText className="h-4 w-4" />
-                                        Zobraziť certifikát
-                                    </a>
-                                </Button>
-                            }
-                        />
-                    )}
-                </CardContent>
-            </Card>
+            {/*<Card>*/}
+            {/*    <CardHeader>*/}
+            {/*        <CardTitle>Vybavenie a priradenie</CardTitle>*/}
+            {/*    </CardHeader>*/}
+            {/*    <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">*/}
+            {/*        /!*<DetailItem label="Sieťový bod" value={vehicle.networkPointName || "-"} />*!/*/}
+            {/*        /!* <DetailItem label="Model RDST" value={rdstDevice?.model || "-"} /> *!/*/}
+            {/*        /!* <DetailItem label="ID RDST" value={rdstDevice?.rdstId || "-"} /> *!/*/}
+            {/*        /!* <DetailItem label="Model AVL" value={avlDevice?.model || "-"} /> *!/*/}
+            {/*        /!* <DetailItem label="ID AVL" value={avlDevice?.communicationId || "-"} /> *!/*/}
+            {/*        {vehicle.certificateFilePath && (*/}
+            {/*            <DetailItem*/}
+            {/*                label="Certifikát"*/}
+            {/*                value={*/}
+            {/*                    <Button variant="link" asChild className="p-0 h-auto">*/}
+            {/*                        <a*/}
+            {/*                            href={`${API_BASE}/vehicles/file?path=${encodeURIComponent(*/}
+            {/*                                vehicle.certificateFilePath*/}
+            {/*                            )}`}*/}
+            {/*                            target="_blank"*/}
+            {/*                            rel="noopener noreferrer"*/}
+            {/*                            className="flex items-center gap-2"*/}
+            {/*                        >*/}
+            {/*                            <FileText className="h-4 w-4" />*/}
+            {/*                            Zobraziť certifikát*/}
+            {/*                        </a>*/}
+            {/*                    </Button>*/}
+            {/*                }*/}
+            {/*            />*/}
+            {/*        )}*/}
+            {/*    </CardContent>*/}
+            {/*</Card>*/}
 
             <Card>
                 <CardHeader>
@@ -323,3 +323,5 @@ export default function VehicleDetailPage() {
         </div>
     );
 }
+
+

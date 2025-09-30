@@ -48,7 +48,6 @@ function mapApiToUi(v: any): Vehicle {
         make: v.brand,
         model: v.model,
 
-        // IDs stored as provider/networkPoint
         provider: v.providerId ? String(v.providerId) : "",
         providerLabel: v.providerName || "—",
 

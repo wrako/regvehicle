@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.springframework.http.HttpStatus.NOT_FOUND;
@@ -54,6 +55,22 @@ public class VehicleService {
 
     public VehicleDto registerVehicle(VehicleDto dto) {
         Vehicle entity = vehicleMapper.toEntity(dto);
+        // NEW: archive previous active vehicle with same VIN and mark new as PREREGISTERED
+//        System.out.println("==========================================");
+//        System.out.println(entity.getProvider().getName());
+//        System.out.println("==========================================");
+        if (dto.getVinNum() != null && !dto.getVinNum().isBlank()) {
+            Optional<Vehicle> existingOpt = vehicleRepository.findByVinNum(dto.getVinNum());
+            if (existingOpt.isPresent()) {
+                Vehicle existing = existingOpt.get();
+                // archive existing active vehicle (keep your audit parameters)
+                existing.setStatus(VehicleStatus.DEREGISTERED);
+//                existing.setArchived(true);
+
+                vehicleRepository.archiveById(existing.getId(), "system", "VIN replaced by new registration");
+                entity.setStatus(VehicleStatus.PREREGISTERED);
+            }
+        }
         Vehicle saved = vehicleRepository.save(entity);
         return vehicleMapper.toDto(saved);
     }
@@ -148,13 +165,23 @@ public class VehicleService {
     }
 
     public VehicleDto unarchiveVehicle(Long id, VehicleStatus status) {
+        // NEW: prevent unarchive if another active vehicle with same VIN exists
+        Vehicle archivedRef = vehicleRepository.findArchivedById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Archived vehicle not found: " + id));
+        if (vehicleRepository.existsByVinNum(archivedRef.getVinNum())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Cannot unarchive: active vehicle with same VIN exists (" + archivedRef.getVinNum() + ")");
+        }
+
         int updated = vehicleRepository.unarchiveById(id);
         if (updated == 0) throw new ResponseStatusException(NOT_FOUND, "Vehicle not found: " + id);
 
         // Reload (optional) if you need full data; @Where will show it now since archived=false.
         Vehicle v = vehicleRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Vehicle not found after unarchive: " + id));
+
         v.setStatus(status);
+        vehicleRepository.unarchiveById(id);
         return vehicleMapper.toDto(v);
     }
 
@@ -168,8 +195,5 @@ public class VehicleService {
                 .orElseThrow(() ->
                         new ResponseStatusException(HttpStatus.NOT_FOUND, "Archived vehicle not found: " + id));
     }
-
-
-
 
 }

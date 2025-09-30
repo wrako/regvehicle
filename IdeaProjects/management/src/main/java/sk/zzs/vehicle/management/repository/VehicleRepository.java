@@ -16,6 +16,10 @@ import java.util.Optional;
 
 public interface VehicleRepository extends JpaRepository<Vehicle, Long> , JpaSpecificationExecutor<Vehicle> {
 
+    // NEW: active-only due to @Where on Vehicle
+    Optional<Vehicle> findByVinNum(String vinNum);
+    boolean existsByVinNum(String vinNum);
+
     @Transactional
     @Modifying
     @Query("""
@@ -31,12 +35,10 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long> , JpaSpe
 //               v.archivedBy = :user,
 //               v.archivedReason = :reason
 
-
     @Transactional
     @Modifying
     @Query(value = "UPDATE vehicle SET archived = false WHERE id = :id AND archived = true", nativeQuery = true)
     int unarchiveById(@Param("id") Long id);
-
 
     //               v.archivedAt = null,
 //               v.archivedBy = null,
@@ -50,5 +52,8 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long> , JpaSpe
 
     @Query(value = "SELECT * FROM vehicle WHERE id = :id AND archived = true", nativeQuery = true)
     Optional<Vehicle> findArchivedById(@Param("id") Long id);
+
+    @Query("SELECT COUNT(v) FROM Vehicle v WHERE v.provider.id = :providerId")
+    long countByProviderId(@Param("providerId") Long providerId);
 
 }

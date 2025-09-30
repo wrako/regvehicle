@@ -28,7 +28,6 @@ export interface EditInitial {
         | "dočasne vyradené"
         | "preregistrované";
     providerId: string;
-    networkPointId: string;
     avlDeviceId: string;
     rdstDeviceId: string;
     filePaths?: string[];
@@ -66,14 +65,12 @@ export function EditVehicleForm({
                                     vehicleId,
                                     initial,
                                     providers,
-                                    networkPoints,
                                     // avlDevices,
                                     // rdstDevices,
                                 }: {
     vehicleId: string;
     initial: EditInitial;
     providers: { id: number | string; name: string }[];
-    networkPoints: { id: number | string; name: string }[];
     // avlDevices: { id: number | string; model: string; communicationId: string }[];
     // rdstDevices: { id: number | string; model: string; rdstId: string }[];
 }) {
@@ -94,7 +91,6 @@ export function EditVehicleForm({
             toast({
                 title: "Úspech",
                 description: "Vozidlo bolo úspešne upravené.",
-                variant: "success",
             });
         } catch (err: any) {
             console.error(err);
@@ -167,27 +163,6 @@ export function EditVehicleForm({
                 />
             </div>
 
-            <div>
-                <label className="block text-sm font-medium mb-1">Sieťový bod</label>
-                <Controller
-                    control={control}
-                    name="networkPointId"
-                    render={({ field }) => (
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Vyber sieťový bod" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {networkPoints.map((n) => (
-                                    <SelectItem key={n.id} value={String(n.id)}>
-                                        {n.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    )}
-                />
-            </div>
 
             {/*<div>*/}
             {/*    <label className="block text-sm font-medium mb-1">AVL zariadenie</label>*/}

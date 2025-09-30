@@ -99,7 +99,6 @@ export default function ArchivedVehicleTable({ vehicles }: VehicleTableProps) {
                         <TableHead>Značka</TableHead>
                         <TableHead className="hidden md:table-cell">Model</TableHead>
                         <TableHead>Poskytovateľ</TableHead>
-                        <TableHead>Sieťový bod</TableHead>
                         <TableHead>Stav</TableHead>
                         <TableHead className="hidden lg:table-cell">Platnosť STK</TableHead>
                         <TableHead>
@@ -117,7 +116,6 @@ export default function ArchivedVehicleTable({ vehicles }: VehicleTableProps) {
                                     {vehicle.model}
                                 </TableCell>
                                 <TableCell>{vehicle.providerLabel}</TableCell>
-                                <TableCell>{vehicle.networkPointLabel}</TableCell>
                                 <TableCell>
                                     <StatusBadge status={vehicle.status} />
                                 </TableCell>
@@ -164,7 +162,7 @@ export default function ArchivedVehicleTable({ vehicles }: VehicleTableProps) {
                         ))
                     ) : (
                         <TableRow>
-                            <TableCell colSpan={8} className="h-24 text-center">
+                            <TableCell colSpan={7} className="h-24 text-center">
                                 Žiadne archivované vozidlá sa nenašli.
                             </TableCell>
                         </TableRow>

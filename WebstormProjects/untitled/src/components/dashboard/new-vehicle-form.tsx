@@ -14,6 +14,8 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+
 import { useToast } from "@/hooks/use-toast";
 import {
     Select,
@@ -34,7 +36,6 @@ import {
     createVehicle,
     editVehicle,
     getProviders,
-    getNetworkPoints,
     getAvlDevices,
     getRdstDevices,
 } from "@/lib/api";
@@ -74,7 +75,6 @@ const formSchema = z.object({
         "preregistrované",
     ]),
     providerId: z.string().min(1, "Vyberte poskytovateľa"),
-    networkPointId: z.string().optional(),
     // avlDeviceId: z.string().optional(),
     // rdstDeviceId: z.string().optional(),
     // optional multiple file upload (attach after save)
@@ -102,9 +102,14 @@ export function NewVehicleForm({ vehicleId, vehicle, onSuccess }: Props) {
     const router = useRouter();
 
     const [providerOptions, setProviderOptions] = useState<any[]>([]);
-    const [networkPointOptions, setNetworkPointOptions] = useState<any[]>([]);
     const [avlOptions, setAvlOptions] = useState<any[]>([]);
     const [rdstOptions, setRdstOptions] = useState<any[]>([]);
+
+// NEW: confirmation dialog state when backend detects existing VIN (PREREGISTERED)
+    const [confirmReRegOpen, setConfirmReRegOpen] = useState(false);
+    const [pendingPayload, setPendingPayload] = useState<any | null>(null);
+    const [submitting, setSubmitting] = useState(false); // if you already have this, reuse yours
+
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
@@ -119,7 +124,6 @@ export function NewVehicleForm({ vehicleId, vehicle, onSuccess }: Props) {
             technicalCheckValidUntil: undefined,
             status: "aktívne",
             providerId: "",
-            networkPointId: "",
             // avlDeviceId: "",
             // rdstDeviceId: "",
             files: undefined,
@@ -132,14 +136,12 @@ export function NewVehicleForm({ vehicleId, vehicle, onSuccess }: Props) {
     useEffect(() => {
         (async () => {
             try {
-                const [prov, nets, avls, rdsts] = await Promise.all([
+                const [prov, avls, rdsts] = await Promise.all([
                     getProviders(),
-                    getNetworkPoints(),
                     getAvlDevices(),
                     getRdstDevices(),
                 ]);
                 setProviderOptions(prov || []);
-                setNetworkPointOptions(nets || []);
                 setAvlOptions(avls || []);
                 setRdstOptions(rdsts || []);
             } catch (e) {
@@ -178,6 +180,32 @@ export function NewVehicleForm({ vehicleId, vehicle, onSuccess }: Props) {
         return () => clearTimeout(handle);
     }, [lp, form]);
 
+    async function finalizeAfterSave(saved: any) {
+        // Upload files after entity exists
+        const newId: number | undefined = Number(saved?.id) || Number(saved?.data?.id);
+        if (Number.isFinite(newId)) {
+            const files = form.getValues("files") as FileList | undefined;
+            await uploadVehicleFiles(newId!, files);
+        }
+        onSuccess ? onSuccess() : router.push("/dashboard");
+    }
+
+    async function vinExists(vin: string): Promise<boolean> {
+        const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8080";
+        const url = new URL(`${apiBase}/vehicles`);
+        url.searchParams.set("page", "0");
+        url.searchParams.set("size", "1");
+        url.searchParams.set("search", vin); // backend search matches VIN/plate
+        const res = await fetch(url.toString(), { credentials: "include" });
+        if (!res.ok) return false;
+        const data = await res.json();
+        const list = Array.isArray(data) ? data : Array.isArray(data?.content) ? data.content : [];
+        return list.some(
+            (v: any) => (v?.vinNum || v?.vin || "").toUpperCase() === vin.toUpperCase() && !v?.archived
+        );
+    }
+
+
     // Upload files to /vehicles/{id}/files
     async function uploadVehicleFiles(vehicleIdNum: number, files?: FileList | null) {
         if (!files || files.length === 0) return;
@@ -212,25 +240,33 @@ export function NewVehicleForm({ vehicleId, vehicle, onSuccess }: Props) {
                 "yyyy-MM-dd"
             ),
             status: statusMap[v.status],
-            provider: v.providerId ? { id: Number(v.providerId) } : null,
-            networkPoint: v.networkPointId
-                ? { id: Number(v.networkPointId) }
-                : null,
+            providerId: v.providerId
             // avlDevice: v.avlDeviceId ? { id: Number(v.avlDeviceId) } : null,
             // rdstDevice: v.rdstDeviceId ? { id: Number(v.rdstDeviceId) } : null,
         };
 
         try {
             let saved: any;
-            if (edit) {
-                saved = await editVehicle(payload);
+            if (edit && vehicleId) {
+                saved = await editVehicle(vehicleId, payload);
                 toast({ title: "Vozidlo aktualizované" });
             } else {
-                saved = await createVehicle(payload);
-                toast({ title: "Vozidlo zaregistrované" });
+            // NEW: preflight VIN check — ask user BEFORE creating if VIN exists
+            const vin = (payload.vinNum || "").toUpperCase().trim();
+            if (vin && (await vinExists(vin))) {
+                setPendingPayload(payload);
+                setConfirmReRegOpen(true);
+                return; // IMPORTANT: stop here; do NOT create yet
             }
 
-            // Upload files after entity exists
+            // No duplicate found → proceed normally
+            saved = await createVehicle(payload);
+            toast({ title: "Vozidlo zaregistrované" });
+        }
+
+
+
+        // Upload files after entity exists
             const newId: number | undefined =
                 Number(vehicleId) || Number(saved?.id) || Number(saved?.data?.id);
             if (Number.isFinite(newId)) {
@@ -463,34 +499,6 @@ export function NewVehicleForm({ vehicleId, vehicle, onSuccess }: Props) {
                                 )}
                             />
 
-                            {/* Network point */}
-                            <FormField
-                                control={form.control}
-                                name="networkPointId"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Sieťový bod</FormLabel>
-                                        <Select
-                                            onValueChange={field.onChange}
-                                            value={field.value || ""}
-                                        >
-                                            <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Vyber sieťový bod" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                {networkPointOptions.map((np) => (
-                                                    <SelectItem key={np.id} value={String(np.id)}>
-                                                        {np.code} - {np.name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
 
                             {/*/!* AVL device *!/*/}
                             {/*<FormField*/}
@@ -586,6 +594,67 @@ export function NewVehicleForm({ vehicleId, vehicle, onSuccess }: Props) {
                     </Button>
                 </div>
             </form>
+
+
+            {/* NEW: Confirm re-registration when duplicate VIN is detected */}
+            <Dialog open={confirmReRegOpen} onOpenChange={setConfirmReRegOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Preregistrácia VIN</DialogTitle>
+                        <DialogDescription>
+                            Vozidlo s týmto VIN už existuje. Chcete ho preregistrovať?
+                            Pôvodné vozidlo bude archivované a nové bude v stave „preregistrované“.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            variant="ghost"
+                            onClick={() => {
+                                // CANCEL: do not create anything
+                                setConfirmReRegOpen(false);
+                                setPendingPayload(null);
+                                setSubmitting(false);
+                            }}
+                        >
+                            Zrušiť
+                        </Button>
+                        <Button
+                            onClick={async () => {
+                                if (!pendingPayload) return;
+                                try {
+                                    setSubmitting(true);
+                                    // PROCEED: now actually create
+                                    const saved = await createVehicle(pendingPayload);
+                                    toast({ title: "Vozidlo zaregistrované" });
+
+                                    // replicate your existing post-save flow (upload files + navigate)
+                                    const newId: number | undefined =
+                                        Number(saved?.id) || Number(saved?.data?.id);
+                                    if (Number.isFinite(newId)) {
+                                        const files = form.getValues("files") as FileList | undefined;
+                                        await uploadVehicleFiles(newId!, files);
+                                    }
+                                    onSuccess ? onSuccess() : router.push("/dashboard");
+                                } catch (e: any) {
+                                    toast({
+                                        title: "Chyba pri preregistrácii",
+                                        description: e?.message ?? "Skúste znova neskôr.",
+                                        variant: "destructive",
+                                    });
+                                } finally {
+                                    setSubmitting(false);
+                                    setConfirmReRegOpen(false);
+                                    setPendingPayload(null);
+                                }
+                            }}
+                        >
+                            Pokračovať
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+
         </Form>
     );
 }

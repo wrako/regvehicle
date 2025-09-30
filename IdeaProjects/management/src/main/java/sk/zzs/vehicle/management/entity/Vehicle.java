@@ -13,9 +13,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
+// NEW: one active row per VIN; allow duplicates only when archived=true
+@Table(name = "vehicle", uniqueConstraints = {
+        @UniqueConstraint(name = "uniq_vehicle_vin_archived", columnNames = {"vin_num", "archived"})
+})
 @Data
 @EntityListeners(VehicleListener.class)
-@SQLDelete(sql = "UPDATE vehicle SET archived = true, archived_at = NOW() WHERE id = ?")
+//@SQLDelete(sql = "UPDATE vehicle SET archived = true, archived_at = NOW() WHERE id = ?")
 @Where(clause = "archived = false")
 
 public class Vehicle {
@@ -28,9 +32,9 @@ public class Vehicle {
     @Column(nullable = false, unique = true)
     private String licensePlate;
 
-    @Column(nullable = false, unique = true)
+    // NEW: no global uniqueness; uniqueness is enforced with archived flag
+    @Column(nullable = false)
     private String vinNum;
-
 
     @Column(nullable = false)
     private String brand;
@@ -48,9 +52,8 @@ public class Vehicle {
     @Column(nullable = false)
     private VehicleStatus status;
 
-
     // relations
-    @OneToOne(optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "provider_id")
     private Provider provider;
 
@@ -62,16 +65,10 @@ public class Vehicle {
 //    @JoinColumn(name = "rdst_id")
 //    private RdstDevice rdstDevice;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "network_point_id")
-    private NetworkPoint networkPoint;
-
-
     @ElementCollection
     @CollectionTable(name = "vehicle_files", joinColumns = @JoinColumn(name = "vehicle_id"))
     @Column(name = "path")
     private List<String> filePaths = new ArrayList<>();
-
 
     @Column(nullable = false)
     private boolean archived = false;

@@ -30,9 +30,6 @@ public class VehicleDto {
     private Long providerId;
     private String providerName;
 
-    private Long networkPointId;
-    private String networkPointName;
-
     private List<String> filePaths;
 
 //    private String archivedBy;

@@ -1,9 +1,9 @@
 package sk.zzs.vehicle.management.controller;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-import sk.zzs.vehicle.management.entity.AvlDevice;
-import sk.zzs.vehicle.management.entity.NetworkPoint;
+import sk.zzs.vehicle.management.dto.NetworkPointDto;
 import sk.zzs.vehicle.management.service.NetworkPointService;
 
 import java.util.List;
@@ -12,24 +12,34 @@ import java.util.List;
 @RequestMapping("/network-points")
 @CrossOrigin(origins = "*")
 public class NetworkPointController {
-    private final NetworkPointService service;
-    public NetworkPointController(NetworkPointService service) { this.service = service; }
+
+    @Autowired
+    private NetworkPointService networkPointService;
+
+    @GetMapping
+    public List<NetworkPointDto> getAllNetworkPoints() {
+        return networkPointService.getAllNetworkPoints();
+    }
+
+    @GetMapping("/{id}")
+    public NetworkPointDto getNetworkPoint(@PathVariable Long id) {
+        return networkPointService.getNetworkPointById(id);
+    }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public NetworkPoint add(@RequestBody NetworkPoint body) { return service.add(body); }
+    public NetworkPointDto createNetworkPoint(@RequestBody NetworkPointDto networkPointDto) {
+        return networkPointService.createNetworkPoint(networkPointDto);
+    }
 
     @PutMapping("/{id}")
-    public NetworkPoint edit(@PathVariable Long id, @RequestBody NetworkPoint body) { return service.edit(id, body); }
+    public NetworkPointDto updateNetworkPoint(@PathVariable Long id, @RequestBody NetworkPointDto networkPointDto) {
+        return networkPointService.updateNetworkPoint(id, networkPointDto);
+    }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable Long id) { service.delete(id); }
-
-    @GetMapping
-    public List<NetworkPoint> getAll() { return service.getAll(); }
-
-    @GetMapping("/{id}")
-    public NetworkPoint getNetworkPoint(@PathVariable Long id) { return service.findById(id); }
-
+    public void deleteNetworkPoint(@PathVariable Long id) {
+        networkPointService.deleteNetworkPoint(id);
+    }
 }

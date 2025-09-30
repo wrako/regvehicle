@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, MoreHorizontal, MapPin, Trash2 } from "lucide-react";
+import { PlusCircle, MoreHorizontal, MapPin, Trash2, Edit } from "lucide-react";
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -60,14 +60,26 @@ export default function NetworkPointsPage() {
     useEffect(() => { load(); }, [load]);
 
     async function handleDelete(id: number) {
-        if (!confirm("Naozaj chcete odstrániť tento bod siete?")) return;
+        if (!confirm("Are you sure you want to delete this network point?")) return;
         try {
             const res = await fetch(`${API_BASE}/network-points/${id}`, { method: "DELETE" });
-            if (!res.ok) throw new Error(await res.text());
-            toast({ title: "Bod siete odstránený" });
+            if (!res.ok) {
+                const errorText = await res.text();
+                if (res.status === 409) {
+                    toast({
+                        title: "Cannot delete network point",
+                        description: "This network point is being used by vehicles and cannot be deleted.",
+                        variant: "destructive"
+                    });
+                    return;
+                }
+                throw new Error(errorText);
+            }
+            toast({ title: "Network point deleted successfully" });
             await load();
         } catch (e: any) {
-            toast({ title: "Chyba pri mazaní", description: e?.message ?? "Skúste znova.", variant: "destructive" });
+            console.error("Delete error:", e);
+            toast({ title: "Error deleting network point", description: e?.message ?? "Please try again.", variant: "destructive" });
         }
     }
 
@@ -137,7 +149,12 @@ export default function NetworkPointsPage() {
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                            {/* Add edit page if needed: <DropdownMenuItem asChild><Link href={`/dashboard/network-points/${point.id}/edit`}>Edit</Link></DropdownMenuItem> */}
+                                                            <DropdownMenuItem asChild>
+                                                                <Link href={`/dashboard/network-points/${point.id}/edit`}>
+                                                                    <Edit className="mr-2 h-4 w-4" />
+                                                                    Edit
+                                                                </Link>
+                                                            </DropdownMenuItem>
                                                             <DropdownMenuItem
                                                                 className="text-destructive focus:text-destructive-foreground focus:bg-destructive"
                                                                 onClick={() => handleDelete(point.id)}

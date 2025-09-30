@@ -98,7 +98,7 @@ export default function VehicleTable({ vehicles }: VehicleTableProps) {
                 method: "POST",
             });
             if (!res.ok) throw new Error(await res.text());
-            setLocalVehicles((prev) => prev.filter((v) => v.id !== id));
+            setLocalVehicles((prev) => prev.filter((v) => v.id !== id.toString()));
         } catch (err) {
             console.error("Failed to delete vehicle", err);
             alert("Nepodarilo sa vymazať vozidlo");
@@ -133,7 +133,7 @@ export default function VehicleTable({ vehicles }: VehicleTableProps) {
 
             // remove from table after archiving
             setLocalVehicles((prev) =>
-                prev.filter((v) => v.id !== selectedVehicleId)
+                prev.filter((v) => v.id !== selectedVehicleId?.toString())
             );
 
             setArchiveOpen(false);
@@ -154,7 +154,6 @@ export default function VehicleTable({ vehicles }: VehicleTableProps) {
                         <TableHead>Značka</TableHead>
                         <TableHead className="hidden md:table-cell">Model</TableHead>
                         <TableHead>Poskytovateľ</TableHead>
-                        <TableHead>Sieťový bod</TableHead>
                         <TableHead>Stav</TableHead>
                         <TableHead className="hidden lg:table-cell">Platnosť STK</TableHead>
                         <TableHead>
@@ -172,7 +171,6 @@ export default function VehicleTable({ vehicles }: VehicleTableProps) {
                                     {vehicle.model}
                                 </TableCell>
                                 <TableCell>{vehicle.providerLabel}</TableCell>
-                                <TableCell>{vehicle.networkPointLabel}</TableCell>
                                 <TableCell>
                                     <StatusBadge status={vehicle.status} />
                                 </TableCell>
@@ -212,7 +210,7 @@ export default function VehicleTable({ vehicles }: VehicleTableProps) {
 
                                             <DropdownMenuItem
                                                 onClick={() => {
-                                                    setSelectedVehicleId(vehicle.id as any);
+                                                    setSelectedVehicleId(parseInt(vehicle.id));
                                                     setArchiveOpen(true);
                                                 }}
                                             >
@@ -220,7 +218,7 @@ export default function VehicleTable({ vehicles }: VehicleTableProps) {
                                             </DropdownMenuItem>
 
                                             <DropdownMenuItem
-                                                onClick={() => handleDelete(vehicle.id)}
+                                                onClick={() => handleDelete(parseInt(vehicle.id))}
                                                 className="text-red-600 cursor-pointer"
                                             >
                                                 Vymazať
@@ -232,7 +230,7 @@ export default function VehicleTable({ vehicles }: VehicleTableProps) {
                         ))
                     ) : (
                         <TableRow>
-                            <TableCell colSpan={8} className="h-24 text-center">
+                            <TableCell colSpan={7} className="h-24 text-center">
                                 Žiadne vozidlá sa nenašli.
                             </TableCell>
                         </TableRow>

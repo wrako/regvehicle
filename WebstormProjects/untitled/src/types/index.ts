@@ -10,7 +10,7 @@ export interface Vehicle {
     provider: string;       // stores ID
     providerLabel: string;  // name from backend
 
-    networkPoint: string;       // ID
+    networkPoint: string;       // stores ID
     networkPointLabel: string;  // name from backend
 
     status: VehicleStatus;
@@ -31,6 +31,14 @@ export type Provider = {
     address: string;
 }
 
+export type ProviderDto = {
+    id?: number;
+    providerId: string;
+    name: string;
+    address: string;
+    networkPoints?: NetworkPointDto[];
+}
+
 export type NetworkPointType = 'STATION' | 'SUBSTATION' | 'HOSPITAL';
 
 export type NetworkPoint = {
@@ -40,6 +48,17 @@ export type NetworkPoint = {
     type: NetworkPointType;
     validFrom?: Date;
     validTo?: Date;
+}
+
+export type NetworkPointDto = {
+    id?: number;
+    code: string;
+    name: string;
+    type: NetworkPointType;
+    validFrom?: string;
+    validTo?: string;
+    providerId: number;
+    providerName?: string;
 }
 
 export type RdstDevice = {

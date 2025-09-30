@@ -4,22 +4,18 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Component;
 import sk.zzs.vehicle.management.entity.*;
-import sk.zzs.vehicle.management.service.NetworkPointService;
 import sk.zzs.vehicle.management.service.ProviderService;
 
 @Component
 public class VehicleMapper {
 
     private final ProviderService providerService;
-    private final NetworkPointService networkPointService;
 
     @PersistenceContext
     private EntityManager em;
 
-    public VehicleMapper(ProviderService providerService,
-                         NetworkPointService networkPointService) {
+    public VehicleMapper(ProviderService providerService) {
         this.providerService = providerService;
-        this.networkPointService = networkPointService;
     }
 
     public VehicleDto toDto(Vehicle v) {
@@ -37,8 +33,6 @@ public class VehicleMapper {
                 .status(v.getStatus())
                 .providerId(v.getProvider() != null ? v.getProvider().getId() : null)
                 .providerName(v.getProvider() != null ? v.getProvider().getName() : null)
-                .networkPointId(v.getNetworkPoint() != null ? v.getNetworkPoint().getId() : null)
-                .networkPointName(v.getNetworkPoint() != null ? v.getNetworkPoint().getName() : null)
 //                .avlDeviceId(v.getAvlDevice() != null ? v.getAvlDevice().getId() : null)
 //                .rdstDeviceId(v.getRdstDevice() != null ? v.getRdstDevice().getId() : null)
 
@@ -65,9 +59,10 @@ public class VehicleMapper {
                 ? providerService.findById(d.getProviderId())
                 : null);
 
-        v.setNetworkPoint(d.getNetworkPointId() != null
-                ? networkPointService.findById(d.getNetworkPointId())
-                : null);
+        System.out.println("==========================================");
+        System.out.println(d.getProviderId());
+        System.out.println("==========================================");
+
 
 //        if (d.getAvlDeviceId() != null) {
 //            AvlDevice avl = new AvlDevice();
@@ -98,6 +93,5 @@ public class VehicleMapper {
         v.setProvider    (d.getProviderId()     != null ? em.getReference(Provider.class,     d.getProviderId())     : null);
 //        v.setAvlDevice   (d.getAvlDeviceId()    != null ? em.getReference(AvlDevice.class,    d.getAvlDeviceId())    : null);
 //        v.setRdstDevice  (d.getRdstDeviceId()   != null ? em.getReference(RdstDevice.class,   d.getRdstDeviceId())   : null);
-        v.setNetworkPoint(d.getNetworkPointId() != null ? em.getReference(NetworkPoint.class, d.getNetworkPointId()) : null);
     }
 }

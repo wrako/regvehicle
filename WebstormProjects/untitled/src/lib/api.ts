@@ -69,3 +69,121 @@ export async function unarchiveVehicle(id: number, status: VehicleStatus) {
     ensureOk(res);
     return (await res.json()) as Vehicle;
 }
+
+// Provider API functions
+export async function getProvider(id: number) {
+    const res = await fetch(`${API_BASE}/providers/${id}`, {
+        method: "GET",
+        credentials: "include",
+    });
+    ensureOk(res);
+    return await res.json();
+}
+
+export async function updateProvider(id: number, data: any) {
+    const res = await fetch(`${API_BASE}/providers/${id}`, {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+    });
+    ensureOk(res);
+    return await res.json();
+}
+
+export async function deleteProvider(id: number) {
+    const res = await fetch(`${API_BASE}/providers/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+    });
+    ensureOk(res);
+}
+
+// Network Point API functions
+export async function getNetworkPoint(id: number) {
+    const res = await fetch(`${API_BASE}/network-points/${id}`, {
+        method: "GET",
+        credentials: "include",
+    });
+    ensureOk(res);
+    return await res.json();
+}
+
+export async function updateNetworkPoint(id: number, data: any) {
+    const res = await fetch(`${API_BASE}/network-points/${id}`, {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+    });
+    ensureOk(res);
+    return await res.json();
+}
+
+export async function deleteNetworkPoint(id: number) {
+    const res = await fetch(`${API_BASE}/network-points/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+    });
+    ensureOk(res);
+}
+
+// Legacy API functions (needed by existing components)
+export async function getProviders() {
+    const res = await fetch(`${API_BASE}/providers`, {
+        method: "GET",
+        credentials: "include",
+    });
+    ensureOk(res);
+    return await res.json();
+}
+
+export async function getNetworkPoints() {
+    const res = await fetch(`${API_BASE}/network-points`, {
+        method: "GET",
+        credentials: "include",
+    });
+    ensureOk(res);
+    return await res.json();
+}
+
+export async function getAvlDevices() {
+    const res = await fetch(`${API_BASE}/avl-devices`, {
+        method: "GET",
+        credentials: "include",
+    });
+    ensureOk(res);
+    return await res.json();
+}
+
+export async function getRdstDevices() {
+    const res = await fetch(`${API_BASE}/rdst-devices`, {
+        method: "GET",
+        credentials: "include",
+    });
+    ensureOk(res);
+    return await res.json();
+}
+
+
+export async function createVehicle(data: any) {
+    const res = await fetch(`${API_BASE}/vehicles`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+    });
+    ensureOk(res);
+    return await res.json();
+}
+
+export async function editVehicle(id: string, data: any) {
+    const res = await fetch(`${API_BASE}/vehicles/${id}/edit`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+    });
+    ensureOk(res);
+    return await res.json();
+}

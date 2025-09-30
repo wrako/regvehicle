@@ -26,18 +26,20 @@ interface VehicleFiltersProps {
 }
 
 const statusOptions: (VehicleStatus | 'all')[] = [
-    'all', 'aktívne', 'rezerva', 'preregistrované'
+    'all', 'aktívne', 'rezerva', 'vyradené', 'dočasne vyradené', 'preregistrované'
 ];
-const statusLabels: { all: string; aktívne: string; rezerva: string; preregistrované: string } = {
+const statusLabels: Record<VehicleStatus | 'all', string> = {
     'all': 'Všetky stavy',
     'aktívne': 'Aktívne',
     'rezerva': 'Rezerva',
+    'vyradené': 'Vyradené',
+    'dočasne vyradené': 'Dočasne vyradené',
     'preregistrované': 'Preregistrované'
 }
 
 
 export default function VehicleFilters({ onFilterChange }: VehicleFiltersProps) {
-    const [filters, setFilters] = useState<Filters>({ query: "", status: "aktívne" });
+    const [filters, setFilters] = useState<Filters>({ query: "", status: "all" });
 
     useEffect(() => {
         const debouncedFilterChange = setTimeout(() => {

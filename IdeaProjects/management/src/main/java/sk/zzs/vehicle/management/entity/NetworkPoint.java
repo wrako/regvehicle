@@ -32,5 +32,10 @@ public class NetworkPoint {
     private LocalDate validFrom;
     private LocalDate validTo;
 
+    // Relations
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "provider_id", nullable = true)
+    private Provider provider;
+
     // getters/setters...
 }

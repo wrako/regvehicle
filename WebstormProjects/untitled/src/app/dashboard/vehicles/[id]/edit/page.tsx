@@ -52,7 +52,6 @@ function normaliseToInitial(api: any): EditInitial {
         ),
         status: mapStatusToUi(api.status),
         providerId: String(api.providerId ?? api.provider?.id ?? ""),
-        networkPointId: String(api.networkPointId ?? api.networkPoint?.id ?? ""),
         avlDeviceId: String(api.avlDeviceId ?? api.avlDevice?.id ?? ""),
         rdstDeviceId: String(api.rdstDeviceId ?? api.rdstDevice?.id ?? ""),
         // removed certificate field (view-only now)
@@ -68,7 +67,6 @@ export default function EditVehiclePage() {
     const [error, setError] = useState<string | null>(null);
 
     const [providers, setProviders] = useState<any[]>([]);
-    const [networkPoints, setNetworkPoints] = useState<any[]>([]);
     const [avlDevices, setAvlDevices] = useState<any[]>([]);
     const [rdstDevices, setRdstDevices] = useState<any[]>([]);
 
@@ -89,14 +87,12 @@ export default function EditVehiclePage() {
 
         (async () => {
             try {
-                const [provRes, netRes, avlRes, rdstRes] = await Promise.all([
+                const [provRes, avlRes, rdstRes] = await Promise.all([
                     fetch(`${API_BASE}/providers`),
-                    fetch(`${API_BASE}/network-points`),
                     fetch(`${API_BASE}/avl-devices`),
                     fetch(`${API_BASE}/rdst-devices`),
                 ]);
                 setProviders(await provRes.json());
-                setNetworkPoints(await netRes.json());
                 setAvlDevices(await avlRes.json());
                 setRdstDevices(await rdstRes.json());
             } catch (e) {
@@ -136,7 +132,6 @@ export default function EditVehiclePage() {
                 vehicleId={id}
                 initial={initial}
                 providers={providers}
-                networkPoints={networkPoints}
                 // avlDevices={avlDevices}
                 // rdstDevices={rdstDevices}
             />

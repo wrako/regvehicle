@@ -16,6 +16,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import * as React from "react";
+import {toast} from "@/hooks/use-toast";
 
 type BackendStatus = "ACTIVE" | "RESERVE" | "PREREGISTERED";
 
@@ -43,16 +44,32 @@ export function UnarchiveDialog({
             setSubmitting(true);
             const params = new URLSearchParams();
             params.append("status", status);
+
             const res = await fetch(
                 `${API_BASE}/vehicles/${vehicleId}/unarchive?${params.toString()}`,
                 { method: "POST" }
             );
+
+            // NEW: explicit 409 handling (VIN conflict on unarchive)
+            if (res.status === 409) {
+                const txt = await res.text().catch(() => "");
+                toast({
+                    title: "Nedá sa obnoviť vozidlo",
+                    description: "Existuje iné aktívne vozidlo s rovnakým VIN.",
+                    variant: "destructive",
+                });
+                setSubmitting(false);
+                return; // do not close dialog, let user resolve it
+            }
+
             if (!res.ok) {
                 const txt = await res.text().catch(() => "");
                 throw new Error(txt || "Unarchive failed");
             }
             onUnarchived(vehicleId);
             onOpenChange(false);
+
+
         } catch (err) {
             console.error("Failed to unarchive vehicle:", err);
             alert("Nepodarilo sa obnoviť vozidlo.");
