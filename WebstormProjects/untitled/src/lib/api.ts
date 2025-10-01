@@ -141,6 +141,55 @@ export async function deleteNetworkPoint(id: number) {
     ensureOk(res);
 }
 
+export async function archiveNetworkPoint(id: number, params?: { reason?: string }) {
+    const url = new URL(`${API_BASE}/network-points/${id}/archive`);
+    if (params?.reason) {
+        url.searchParams.set("reason", params.reason);
+    }
+    const res = await fetch(url.toString(), {
+        method: "POST",
+        credentials: "include",
+    });
+    if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `Archive failed: ${res.status}`);
+    }
+    return await res.json();
+}
+
+export async function unarchiveNetworkPoint(id: number) {
+    const res = await fetch(`${API_BASE}/network-points/${id}/unarchive`, {
+        method: "POST",
+        credentials: "include",
+    });
+    if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `Unarchive failed: ${res.status}`);
+    }
+    return await res.json();
+}
+
+export async function getArchivedNetworkPoints(page: number = 0, size: number = 100) {
+    const res = await fetch(
+        `${API_BASE}/network-points/archived/page?page=${page}&size=${size}`,
+        {
+            method: "GET",
+            credentials: "include",
+        }
+    );
+    ensureOk(res);
+    return await res.json();
+}
+
+export async function getArchivedNetworkPoint(id: number) {
+    const res = await fetch(`${API_BASE}/network-points/archived/${id}`, {
+        method: "GET",
+        credentials: "include",
+    });
+    ensureOk(res);
+    return await res.json();
+}
+
 // Legacy API functions (needed by existing components)
 export async function getProviders() {
     const res = await fetch(`${API_BASE}/providers`, {

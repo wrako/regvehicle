@@ -4,6 +4,7 @@ package sk.zzs.vehicle.management.entity;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
+import org.hibernate.annotations.Where;
 import sk.zzs.vehicle.management.enumer.NetworkPointType;
 
 import java.time.LocalDate;
@@ -11,6 +12,7 @@ import java.time.LocalDate;
 @Entity
 @Data
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@Where(clause = "archived = false")
 public class NetworkPoint {
 
     @Id
@@ -36,6 +38,9 @@ public class NetworkPoint {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "provider_id", nullable = true)
     private Provider provider;
+
+    @Column(nullable = false)
+    private boolean archived = false;
 
     // getters/setters...
 }

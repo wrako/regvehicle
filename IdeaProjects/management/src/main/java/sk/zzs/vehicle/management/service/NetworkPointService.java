@@ -1,6 +1,8 @@
 package sk.zzs.vehicle.management.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +16,8 @@ import sk.zzs.vehicle.management.repository.ProviderRepository;
 import sk.zzs.vehicle.management.repository.VehicleRepository;
 
 import java.util.List;
+
+import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @Service
 @Transactional
@@ -126,5 +130,45 @@ public class NetworkPointService {
                     "Provider has only " + have + " vehicles but must have " + required + " vehicles."
             );
         }
+    }
+
+    public NetworkPointDto archiveNetworkPoint(Long id, String reason) {
+        NetworkPoint existing = networkPointRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "NetworkPoint not found: " + id));
+
+        // Because of @Where, the managed entity may still read archived=false until cleared/refresh.
+        // Return a DTO based on known state:
+        existing.setArchived(true);
+        return networkPointMapper.toDto(existing);
+    }
+
+    public NetworkPointDto unarchiveNetworkPoint(Long id) {
+        NetworkPoint archivedRef = networkPointRepository.findArchivedById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Archived network point not found: " + id));
+
+        // Enforce capacity rule if provider exists
+        if (archivedRef.getProvider() != null) {
+            ensureProviderCapacity(archivedRef.getProvider().getId(), /*assigningOneMore*/ true);
+        }
+
+        int updated = networkPointRepository.unarchiveById(id);
+        if (updated == 0) throw new ResponseStatusException(NOT_FOUND, "NetworkPoint not found: " + id);
+
+        // Reload (optional) if you need full data; @Where will show it now since archived=false.
+        NetworkPoint np = networkPointRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "NetworkPoint not found after unarchive: " + id));
+
+        return networkPointMapper.toDto(np);
+    }
+
+    public Page<NetworkPointDto> getArchived(Pageable pageable) {
+        return networkPointRepository.findArchivedNative(pageable).map(networkPointMapper::toDto);
+    }
+
+    public NetworkPointDto getArchivedById(Long id) {
+        return networkPointRepository.findArchivedById(id)
+                .map(networkPointMapper::toDto)
+                .orElseThrow(() ->
+                        new ResponseStatusException(HttpStatus.NOT_FOUND, "Archived network point not found: " + id));
     }
 }

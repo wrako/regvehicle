@@ -1,6 +1,8 @@
 package sk.zzs.vehicle.management.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import sk.zzs.vehicle.management.dto.NetworkPointDto;
@@ -41,5 +43,26 @@ public class NetworkPointController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteNetworkPoint(@PathVariable Long id) {
         networkPointService.deleteNetworkPoint(id);
+    }
+
+    @PostMapping("/{id}/archive")
+    public NetworkPointDto archive(@PathVariable Long id,
+                                    @RequestParam(value = "reason", required = false) String reason) {
+        return networkPointService.archiveNetworkPoint(id, reason);
+    }
+
+    @PostMapping("/{id}/unarchive")
+    public NetworkPointDto unarchive(@PathVariable Long id) {
+        return networkPointService.unarchiveNetworkPoint(id);
+    }
+
+    @GetMapping("/archived/page")
+    public Page<NetworkPointDto> getArchivedPaged(Pageable pageable) {
+        return networkPointService.getArchived(pageable);
+    }
+
+    @GetMapping("/archived/{id}")
+    public NetworkPointDto getArchivedNetworkPoint(@PathVariable Long id) {
+        return networkPointService.getArchivedById(id);
     }
 }

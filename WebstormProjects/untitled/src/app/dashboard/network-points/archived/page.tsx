@@ -1,10 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, MoreHorizontal, MapPin, Trash2, Edit, Archive } from "lucide-react";
-import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +16,7 @@ import { format } from "date-fns";
 import { sk } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { API_BASE } from "@/constants/api";
+import { MoreHorizontal, ArchiveRestore } from "lucide-react";
 
 type NetworkPointType = "RLP" | "RV" | "RZP" | "OTHER";
 type NetworkPoint = {
@@ -19,8 +24,8 @@ type NetworkPoint = {
     code: string;
     name: string;
     type: NetworkPointType;
-    validFrom?: string | null; // yyyy-MM-dd
-    validTo?: string | null;   // yyyy-MM-dd
+    validFrom?: string | null;
+    validTo?: string | null;
 };
 
 const typeLabels: Record<NetworkPointType, string> = {
@@ -37,62 +42,70 @@ function parseLocalDate(s?: string | null): Date | null {
     return isNaN(dt.getTime()) ? null : dt;
 }
 
-export default function NetworkPointsPage() {
+export default function ArchivedNetworkPointsPage() {
     const { toast } = useToast();
     const [items, setItems] = useState<NetworkPoint[]>([]);
     const [loading, setLoading] = useState(false);
 
+    const queryParams = useMemo(() => {
+        const params = new URLSearchParams();
+        params.append("size", "100");
+        params.append("page", "0");
+        return params.toString();
+    }, []);
+
     const load = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await fetch(`${API_BASE}/network-points`, { headers: { Accept: "application/json" } });
+            const res = await fetch(
+                `${API_BASE}/network-points/archived/page?${queryParams}`,
+                {
+                    method: "GET",
+                    headers: { "Content-Type": "application/json" },
+                }
+            );
             if (!res.ok) throw new Error(await res.text());
-            const data = (await res.json()) as NetworkPoint[];
-            setItems(data);
+            const data = await res.json();
+            setItems(data.content || []);
         } catch (e: any) {
-            toast({ title: "Nepodarilo sa načítať body siete", description: e?.message, variant: "destructive" });
+            console.error("Failed to load archived network points:", e);
+            toast({
+                title: "Failed to load archived network points",
+                description: e?.message,
+                variant: "destructive"
+            });
+            setItems([]);
         } finally {
             setLoading(false);
         }
-    }, [toast]);
+    }, [queryParams, toast]);
 
-    useEffect(() => { load(); }, [load]);
+    useEffect(() => {
+        load();
+    }, [load]);
 
-    async function handleDelete(id: number) {
-        if (!confirm("Are you sure you want to delete this network point?")) return;
+    async function handleUnarchive(id: number) {
+        if (!confirm("Are you sure you want to unarchive this network point?")) return;
         try {
-            const res = await fetch(`${API_BASE}/network-points/${id}`, { method: "DELETE" });
+            const res = await fetch(`${API_BASE}/network-points/${id}/unarchive`, { method: "POST" });
             if (!res.ok) {
                 const errorText = await res.text();
                 if (res.status === 409) {
                     toast({
-                        title: "Cannot delete network point",
-                        description: "This network point is being used by vehicles and cannot be deleted.",
+                        title: "Cannot unarchive network point",
+                        description: errorText,
                         variant: "destructive"
                     });
                     return;
                 }
                 throw new Error(errorText);
             }
-            toast({ title: "Network point deleted successfully" });
+            toast({ title: "Network point unarchived successfully" });
             await load();
         } catch (e: any) {
-            console.error("Delete error:", e);
-            toast({ title: "Error deleting network point", description: e?.message ?? "Please try again.", variant: "destructive" });
-        }
-    }
-
-    async function handleArchive(id: number) {
-        if (!confirm("Are you sure you want to archive this network point?")) return;
-        try {
-            const res = await fetch(`${API_BASE}/network-points/${id}/archive`, { method: "POST" });
-            if (!res.ok) throw new Error(await res.text());
-            toast({ title: "Network point archived successfully" });
-            await load();
-        } catch (e: any) {
-            console.error("Archive error:", e);
+            console.error("Unarchive error:", e);
             toast({
-                title: "Error archiving network point",
+                title: "Error unarchiving network point",
                 description: e?.message ?? "Please try again.",
                 variant: "destructive"
             });
@@ -101,38 +114,17 @@ export default function NetworkPointsPage() {
 
     return (
         <div className="flex flex-col gap-6">
-            <div className="flex items-center justify-between">
-                <div className="flex items-start gap-4">
-                    <div className="p-2 bg-primary/10 rounded-md">
-                        <MapPin className="h-8 w-8 text-primary" />
-                    </div>
-                    <div>
-                        <h1 className="text-2xl font-bold">Network Points</h1>
-                        <p className="text-muted-foreground">Browse and manage all network points</p>
-                    </div>
-                </div>
-                <div className="flex gap-2">
-                    <Button variant="outline" asChild>
-                        <Link href="/dashboard/network-points/archived">
-                            <Archive className="mr-2 h-4 w-4" />
-                            Archived
-                        </Link>
-                    </Button>
-                    <Button asChild>
-                        <Link href="/dashboard/network-points/new">
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            New Network Point
-                        </Link>
-                    </Button>
-                </div>
-            </div>
-
             <Card>
                 <CardHeader>
-                    <CardTitle>Network Point List</CardTitle>
-                    <CardDescription>A list of all registered network points in the system.</CardDescription>
+                    <CardTitle>Archived Network Points</CardTitle>
+                    <CardDescription>
+                        List of all archived network points in the system.
+                    </CardDescription>
                 </CardHeader>
                 <CardContent>
+                    {loading && (
+                        <div className="text-sm text-muted-foreground py-2">Loading...</div>
+                    )}
                     <div className="rounded-md border">
                         <Table>
                             <TableHeader>
@@ -148,11 +140,7 @@ export default function NetworkPointsPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {loading ? (
-                                    <TableRow>
-                                        <TableCell colSpan={6} className="h-24 text-center">Loading…</TableCell>
-                                    </TableRow>
-                                ) : items.length > 0 ? (
+                                {items.length > 0 ? (
                                     items.map((point) => {
                                         const vf = parseLocalDate(point.validFrom);
                                         const vt = parseLocalDate(point.validTo);
@@ -173,24 +161,11 @@ export default function NetworkPointsPage() {
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                            <DropdownMenuItem asChild>
-                                                                <Link href={`/dashboard/network-points/${point.id}/edit`}>
-                                                                    <Edit className="mr-2 h-4 w-4" />
-                                                                    Edit
-                                                                </Link>
-                                                            </DropdownMenuItem>
                                                             <DropdownMenuItem
-                                                                onClick={() => handleArchive(point.id)}
+                                                                onClick={() => handleUnarchive(point.id)}
                                                             >
-                                                                <Archive className="mr-2 h-4 w-4" />
-                                                                Archive
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem
-                                                                className="text-destructive focus:text-destructive-foreground focus:bg-destructive"
-                                                                onClick={() => handleDelete(point.id)}
-                                                            >
-                                                                <Trash2 className="mr-2 h-4 w-4" />
-                                                                Delete
+                                                                <ArchiveRestore className="mr-2 h-4 w-4" />
+                                                                Unarchive
                                                             </DropdownMenuItem>
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
@@ -201,7 +176,7 @@ export default function NetworkPointsPage() {
                                 ) : (
                                     <TableRow>
                                         <TableCell colSpan={6} className="h-24 text-center">
-                                            No network points found.
+                                            No archived network points found.
                                         </TableCell>
                                     </TableRow>
                                 )}
