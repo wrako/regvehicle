@@ -9,6 +9,7 @@ import sk.zzs.vehicle.management.dto.NetworkPointDto;
 import sk.zzs.vehicle.management.service.NetworkPointService;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/network-points")
@@ -64,5 +65,10 @@ public class NetworkPointController {
     @GetMapping("/archived/{id}")
     public NetworkPointDto getArchivedNetworkPoint(@PathVariable Long id) {
         return networkPointService.getArchivedById(id);
+    }
+
+    @PostMapping("/expire-check")
+    public Map<String, Object> expireCheck() {
+        return networkPointService.checkAndArchiveExpiredNetworkPoints();
     }
 }

@@ -9,6 +9,8 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 import sk.zzs.vehicle.management.entity.NetworkPoint;
 
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 public interface NetworkPointRepository extends JpaRepository<NetworkPoint, Long> {
@@ -39,5 +41,8 @@ public interface NetworkPointRepository extends JpaRepository<NetworkPoint, Long
 
     @Query(value = "SELECT * FROM network_point WHERE id = :id AND archived = true", nativeQuery = true)
     Optional<NetworkPoint> findArchivedById(@Param("id") Long id);
+
+    @Query("SELECT np FROM NetworkPoint np WHERE np.validTo < :today AND np.archived = false")
+    List<NetworkPoint> findExpiredCandidates(@Param("today") LocalDate today);
 
 }

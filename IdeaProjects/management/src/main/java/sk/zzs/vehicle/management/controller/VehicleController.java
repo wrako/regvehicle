@@ -44,6 +44,7 @@ public class VehicleController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate stkValidTo,
             @PageableDefault(size = 20, sort = "id") Pageable pageable
     ) {
+        
         VehicleFilter filter = new VehicleFilter(q, status, provider, stkValidFrom, stkValidTo);
         return vehicleService.search(filter, pageable);
     }

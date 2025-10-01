@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, MoreHorizontal, MapPin, Trash2, Edit, Archive } from "lucide-react";
+import { PlusCircle, MoreHorizontal, MapPin, Trash2, Edit, Archive, Clock } from "lucide-react";
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -12,6 +12,7 @@ import { format } from "date-fns";
 import { sk } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { API_BASE } from "@/constants/api";
+import { runExpireCheckNetworkPoints } from "@/lib/api";
 
 type NetworkPointType = "RLP" | "RV" | "RZP" | "OTHER";
 type NetworkPoint = {
@@ -41,6 +42,7 @@ export default function NetworkPointsPage() {
     const { toast } = useToast();
     const [items, setItems] = useState<NetworkPoint[]>([]);
     const [loading, setLoading] = useState(false);
+    const [checkingExpired, setCheckingExpired] = useState(false);
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -57,6 +59,36 @@ export default function NetworkPointsPage() {
     }, [toast]);
 
     useEffect(() => { load(); }, [load]);
+
+    async function handleCheckExpirations() {
+        setCheckingExpired(true);
+        try {
+            const result = await runExpireCheckNetworkPoints();
+            const { checked, archived, skippedArchived, errors } = result;
+
+            let description = `Checked: ${checked}, Archived: ${archived}`;
+            if (skippedArchived > 0) {
+                description += `, Skipped: ${skippedArchived}`;
+            }
+
+            toast({
+                title: "Expiration check completed",
+                description,
+                variant: errors && errors.length > 0 ? "destructive" : "default"
+            });
+
+            await load();
+        } catch (e: any) {
+            console.error("Expiration check error:", e);
+            toast({
+                title: "Error checking expirations",
+                description: e?.message ?? "Please try again.",
+                variant: "destructive"
+            });
+        } finally {
+            setCheckingExpired(false);
+        }
+    }
 
     async function handleDelete(id: number) {
         if (!confirm("Are you sure you want to delete this network point?")) return;
@@ -112,6 +144,14 @@ export default function NetworkPointsPage() {
                     </div>
                 </div>
                 <div className="flex gap-2">
+                    <Button
+                        variant="outline"
+                        onClick={handleCheckExpirations}
+                        disabled={checkingExpired}
+                    >
+                        <Clock className="mr-2 h-4 w-4" />
+                        {checkingExpired ? "Checking..." : "Check expirations"}
+                    </Button>
                     <Button variant="outline" asChild>
                         <Link href="/dashboard/network-points/archived">
                             <Archive className="mr-2 h-4 w-4" />

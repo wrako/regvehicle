@@ -190,6 +190,18 @@ export async function getArchivedNetworkPoint(id: number) {
     return await res.json();
 }
 
+export async function runExpireCheckNetworkPoints() {
+    const res = await fetch(`${API_BASE}/network-points/expire-check`, {
+        method: "POST",
+        credentials: "include",
+    });
+    if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `Expire check failed: ${res.status}`);
+    }
+    return await res.json();
+}
+
 // Legacy API functions (needed by existing components)
 export async function getProviders() {
     const res = await fetch(`${API_BASE}/providers`, {

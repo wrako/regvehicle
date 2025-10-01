@@ -15,7 +15,11 @@ import sk.zzs.vehicle.management.repository.NetworkPointRepository;
 import sk.zzs.vehicle.management.repository.ProviderRepository;
 import sk.zzs.vehicle.management.repository.VehicleRepository;
 
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
@@ -170,5 +174,40 @@ public class NetworkPointService {
                 .map(networkPointMapper::toDto)
                 .orElseThrow(() ->
                         new ResponseStatusException(HttpStatus.NOT_FOUND, "Archived network point not found: " + id));
+    }
+
+    /**
+     * Scans all NetworkPoints and archives expired ones.
+     * NetworkPoint is expired if validTo != null AND validTo < today.
+     * Returns JSON summary: { checked, archived, skippedArchived, errors?[] }
+     */
+    public Map<String, Object> checkAndArchiveExpiredNetworkPoints() {
+        LocalDate today = LocalDate.now();
+        List<NetworkPoint> candidates = networkPointRepository.findExpiredCandidates(today);
+
+        int checked = candidates.size();
+        int archived = 0;
+        int skippedArchived = 0;
+        List<String> errors = new ArrayList<>();
+
+        for (NetworkPoint np : candidates) {
+            try {
+                String reason = "Expired (validTo=" + np.getValidTo() + ")";
+                archiveNetworkPoint(np.getId(), reason);
+                archived++;
+            } catch (Exception e) {
+                errors.add("NetworkPoint " + np.getId() + ": " + e.getMessage());
+                skippedArchived++;
+            }
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("checked", checked);
+        result.put("archived", archived);
+        result.put("skippedArchived", skippedArchived);
+        if (!errors.isEmpty()) {
+            result.put("errors", errors);
+        }
+        return result;
     }
 }
