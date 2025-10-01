@@ -9,8 +9,7 @@ import {
     EditVehicleForm,
     type EditInitial,
 } from "@/components/dashboard/edit-vehicle-form";
-
-const API_BASE = "http://localhost:8080";
+import { API_BASE } from "@/constants/api";
 
 function parseLocalDate(s?: string | null) {
     if (!s) return undefined;

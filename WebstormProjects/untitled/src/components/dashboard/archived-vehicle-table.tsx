@@ -24,8 +24,7 @@ import { sk } from "date-fns/locale";
 import Link from "next/link";
 import * as React from "react";
 import { UnarchiveDialog } from "./unarchive-dialog";
-
-const API_BASE = "http://localhost:8080";
+import { API_BASE } from "@/constants/api";
 
 interface VehicleTableProps {
     vehicles: Vehicle[];

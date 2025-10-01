@@ -10,8 +10,7 @@ import {
 } from "@/components/ui/card";
 import VehicleTable from "@/components/dashboard/archived-vehicle-table";
 import type { Vehicle, VehicleStatus } from "@/types";
-
-const API_BASE = "http://localhost:8080"; // adjust if backend runs elsewhere
+import { API_BASE } from "@/constants/api";
 
 // === Status conversions ===
 const apiToUiStatus: Record<string, VehicleStatus> = {

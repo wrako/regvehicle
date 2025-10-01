@@ -12,7 +12,6 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { sk } from "date-fns/locale";
 import {
@@ -30,10 +29,9 @@ import {
     DropdownMenuLabel,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-const API_BASE = "http://localhost:8080";
-
-type OperationType = "CREATE" | "UPDATE" | "DELETE";
+import { Badge } from "@/components/ui/badge";
+import { API_BASE } from "@/constants/api";
+import { OperationBadge, type OperationType } from "@/components/common";
 
 interface VehicleLog {
     id: number;
@@ -51,19 +49,8 @@ interface VehicleLog {
     operation: OperationType;
 }
 
-const OperationBadge = ({ operation }: { operation: OperationType }) => {
-    const variantMap: Record<
-        OperationType,
-        "default" | "secondary" | "destructive"
-    > = {
-        CREATE: "default",
-        UPDATE: "secondary",
-        DELETE: "destructive",
-    };
-    return <Badge variant={variantMap[operation]}>{operation}</Badge>;
-};
-
-const StatusBadge = ({ status }: { status: string }) => {
+// Helper component for history status badge (differs from vehicle status)
+const HistoryStatusBadge = ({ status }: { status: string }) => {
     const statusLabels: Record<string, string> = {
         ACTIVE: "Aktívne",
         RESERVE: "Rezerva",
@@ -202,7 +189,7 @@ export default function VehicleHistoryPage() {
                                                 <OperationBadge operation={log.operation} />
                                             </TableCell>
                                             <TableCell>
-                                                <StatusBadge status={log.status} />
+                                                <HistoryStatusBadge status={log.status} />
                                             </TableCell>
                                             <TableCell>
                                                 {log.technicalCheckValidUntil

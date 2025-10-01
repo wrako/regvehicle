@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import * as React from "react";
 import {toast} from "@/hooks/use-toast";
+import { API_BASE } from "@/constants/api";
 
 type BackendStatus = "ACTIVE" | "RESERVE" | "PREREGISTERED";
 
@@ -26,8 +27,6 @@ interface UnarchiveDialogProps {
     vehicleId: string | null;
     onUnarchived: (vehicleId: string) => void;
 }
-
-const API_BASE = "http://localhost:8080";
 
 export function UnarchiveDialog({
                                     open,

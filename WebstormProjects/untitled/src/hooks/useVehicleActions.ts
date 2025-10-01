@@ -1,6 +1,5 @@
 import { useState } from "react";
-
-const API_BASE = "http://localhost:8080";
+import { API_BASE } from "@/constants/api";
 
 export function useVehicleActions() {
     const [archiveOpen, setArchiveOpen] = useState(false);

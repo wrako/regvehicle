@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { FileText } from "lucide-react";
+import { API_BASE } from "@/constants/api";
+import { fileNameFromPath } from "@/utils/stringHelpers";
 
 export interface EditInitial {
     licensePlate: string;
@@ -33,8 +35,6 @@ export interface EditInitial {
     filePaths?: string[];
 }
 
-const API_BASE = "http://localhost:8080";
-
 function mapStatusToApi(ui: EditInitial["status"]): string {
     switch (ui) {
         case "aktívne":
@@ -51,15 +51,6 @@ function mapStatusToApi(ui: EditInitial["status"]): string {
             return "ACTIVE";
     }
 }
-
-// helper to display filename from path
-const fileNameFromPath = (p: string) => {
-    try {
-        return p.split(/[\\/]/).pop() || p;
-    } catch {
-        return p;
-    }
-};
 
 export function EditVehicleForm({
                                     vehicleId,

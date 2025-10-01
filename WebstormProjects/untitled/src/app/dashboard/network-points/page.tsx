@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { sk } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
+import { API_BASE } from "@/constants/api";
 
 type NetworkPointType = "RLP" | "RV" | "RZP" | "OTHER";
 type NetworkPoint = {
@@ -28,8 +29,6 @@ const typeLabels: Record<NetworkPointType, string> = {
     RZP: "RZP",
     OTHER: "Other",
 };
-
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
 
 function parseLocalDate(s?: string | null): Date | null {
     if (!s) return null;

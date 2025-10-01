@@ -14,9 +14,7 @@ import type { Vehicle, VehicleStatus } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Archive } from "lucide-react";
 import Link from "next/link";
-
-
-const API_BASE = "http://localhost:8080"; // adjust if backend runs elsewhere
+import { API_BASE } from "@/constants/api";
 
 const uiToApiStatus: Record<VehicleStatus, string> = {
     aktívne: "ACTIVE",

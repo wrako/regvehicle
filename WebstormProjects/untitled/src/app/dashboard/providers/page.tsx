@@ -8,6 +8,7 @@ import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+import { API_BASE } from "@/constants/api";
 
 type Provider = {
     id: number;
@@ -21,8 +22,6 @@ type ProviderRow = Provider & {
     vehicles: number;
     networkPoints: number;
 };
-
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
 
 export default function ProvidersPage() {
     const { toast } = useToast();
