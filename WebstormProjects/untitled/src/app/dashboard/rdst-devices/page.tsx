@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlusCircle, MoreHorizontal, RadioTower, Trash2 } from "lucide-react";
@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { API_BASE } from "@/constants/api";
+import { cancellableFetch } from "@/utils/fetchUtils";
 
 type RdstDevice = { id: number; model: string; rdstId: string };
 
@@ -16,19 +17,34 @@ export default function RdstDevicesPage() {
     const { toast } = useToast();
     const [devices, setDevices] = useState<RdstDevice[]>([]);
     const [loading, setLoading] = useState(false);
+    const lastQueryKeyRef = useRef<string>("");
+
+    const queryKey = useMemo(() => `${API_BASE}/rdst-devices`, []);
 
     const load = useCallback(async () => {
+        // StrictMode guard: prevent duplicate calls
+        if (lastQueryKeyRef.current === queryKey) {
+            return;
+        }
+        lastQueryKeyRef.current = queryKey;
+
         setLoading(true);
         try {
-            const res = await fetch(`${API_BASE}/rdst-devices`, { headers: { Accept: "application/json" } });
-            if (!res.ok) throw new Error(await res.text());
-            setDevices(await res.json());
+            const data = await cancellableFetch<RdstDevice[]>(
+                `${API_BASE}/rdst-devices`,
+                { headers: { Accept: "application/json" } },
+                "rdst-devices-list"
+            );
+            setDevices(data);
         } catch (e: any) {
+            // Ignore abort errors
+            if (e.name === 'AbortError') return;
+
             toast({ title: "Nepodarilo sa načítať RDST zariadenia", description: e?.message, variant: "destructive" });
         } finally {
             setLoading(false);
         }
-    }, [toast]);
+    }, [queryKey, toast]);
 
     useEffect(() => { load(); }, [load]);
 
@@ -38,6 +54,8 @@ export default function RdstDevicesPage() {
             const res = await fetch(`${API_BASE}/rdst-devices/${id}`, { method: "DELETE" });
             if (!res.ok) throw new Error(await res.text());
             toast({ title: "RDST zariadenie odstránené" });
+            // Reset ref to allow reload
+            lastQueryKeyRef.current = "";
             await load();
         } catch (e: any) {
             toast({ title: "Chyba pri mazaní", description: e?.message ?? "Skúste znova.", variant: "destructive" });

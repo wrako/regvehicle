@@ -15,6 +15,7 @@ import { API_BASE } from "@/lib/api";
 const providerSchema = z.object({
     providerId: z.string().min(1, "Provider ID is required"),
     name: z.string().min(1, "Name is required"),
+    email: z.string().email("Invalid email address").optional().or(z.literal("")),
     address: z.string().min(1, "Address is required"),
 });
 
@@ -30,6 +31,7 @@ export function NewProviderForm() {
         defaultValues: {
             providerId: "",
             name: "",
+            email: "",
             address: "",
         },
     });
@@ -100,6 +102,21 @@ export function NewProviderForm() {
                                     <FormLabel>Name *</FormLabel>
                                     <FormControl>
                                         <Input placeholder="Provider name" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        {/* Email */}
+                        <FormField
+                            control={form.control}
+                            name="email"
+                            render={({ field }) => (
+                                <FormItem className="md:col-span-2">
+                                    <FormLabel>Email</FormLabel>
+                                    <FormControl>
+                                        <Input type="email" placeholder="email@example.com" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>

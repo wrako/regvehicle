@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import {
     Card,
     CardContent,
@@ -17,6 +17,7 @@ import { sk } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { API_BASE } from "@/constants/api";
 import { MoreHorizontal, ArchiveRestore } from "lucide-react";
+import { cancellableFetch } from "@/utils/fetchUtils";
 
 type NetworkPointType = "RLP" | "RV" | "RZP" | "OTHER";
 type NetworkPoint = {
@@ -46,6 +47,7 @@ export default function ArchivedNetworkPointsPage() {
     const { toast } = useToast();
     const [items, setItems] = useState<NetworkPoint[]>([]);
     const [loading, setLoading] = useState(false);
+    const lastQueryKeyRef = useRef<string>("");
 
     const queryParams = useMemo(() => {
         const params = new URLSearchParams();
@@ -54,20 +56,33 @@ export default function ArchivedNetworkPointsPage() {
         return params.toString();
     }, []);
 
+    const queryKey = useMemo(() =>
+        `${API_BASE}/network-points/archived/page?${queryParams}`,
+        [queryParams]
+    );
+
     const load = useCallback(async () => {
+        // StrictMode guard: prevent duplicate calls
+        if (lastQueryKeyRef.current === queryKey) {
+            return;
+        }
+        lastQueryKeyRef.current = queryKey;
+
         setLoading(true);
         try {
-            const res = await fetch(
-                `${API_BASE}/network-points/archived/page?${queryParams}`,
+            const data = await cancellableFetch(
+                queryKey,
                 {
                     method: "GET",
                     headers: { "Content-Type": "application/json" },
-                }
+                },
+                "archived-network-points-list"
             );
-            if (!res.ok) throw new Error(await res.text());
-            const data = await res.json();
             setItems(data.content || []);
         } catch (e: any) {
+            // Ignore abort errors
+            if (e.name === 'AbortError') return;
+
             console.error("Failed to load archived network points:", e);
             toast({
                 title: "Failed to load archived network points",
@@ -78,7 +93,7 @@ export default function ArchivedNetworkPointsPage() {
         } finally {
             setLoading(false);
         }
-    }, [queryParams, toast]);
+    }, [queryKey, toast]);
 
     useEffect(() => {
         load();
@@ -101,6 +116,8 @@ export default function ArchivedNetworkPointsPage() {
                 throw new Error(errorText);
             }
             toast({ title: "Network point unarchived successfully" });
+            // Reset ref to allow reload
+            lastQueryKeyRef.current = "";
             await load();
         } catch (e: any) {
             console.error("Unarchive error:", e);

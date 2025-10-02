@@ -18,6 +18,7 @@ import type { ProviderDto } from "@/types";
 const providerSchema = z.object({
   providerId: z.string().min(1, "Provider ID is required"),
   name: z.string().min(1, "Name is required"),
+  email: z.string().email("Invalid email address").optional().or(z.literal("")),
   address: z.string().min(1, "Address is required"),
 });
 
@@ -37,6 +38,7 @@ export default function EditProviderPage() {
     defaultValues: {
       providerId: "",
       name: "",
+      email: "",
       address: "",
     },
   });
@@ -51,6 +53,7 @@ export default function EditProviderPage() {
         form.reset({
           providerId: provider.providerId,
           name: provider.name,
+          email: provider.email || "",
           address: provider.address,
         });
       } catch (error: any) {
@@ -153,6 +156,20 @@ export default function EditProviderPage() {
                     <FormLabel>Name</FormLabel>
                     <FormControl>
                       <Input placeholder="Enter provider name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="email@example.com" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

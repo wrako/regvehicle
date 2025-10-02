@@ -19,6 +19,7 @@ public class ProviderMapper {
                 .id(provider.getId())
                 .providerId(provider.getProviderId())
                 .name(provider.getName())
+                .email(provider.getEmail())
                 .address(provider.getAddress())
                 .build();
     }
@@ -30,6 +31,7 @@ public class ProviderMapper {
                 .id(provider.getId())
                 .providerId(provider.getProviderId())
                 .name(provider.getName())
+                .email(provider.getEmail())
                 .address(provider.getAddress())
                 .build();
     }
@@ -41,6 +43,7 @@ public class ProviderMapper {
         provider.setId(dto.getId());
         provider.setProviderId(dto.getProviderId());
         provider.setName(dto.getName());
+        provider.setEmail(dto.getEmail());
         provider.setAddress(dto.getAddress());
 
         return provider;
@@ -49,6 +52,7 @@ public class ProviderMapper {
     public void copyToEntity(ProviderDto dto, Provider provider) {
         provider.setProviderId(dto.getProviderId());
         provider.setName(dto.getName());
+        provider.setEmail(dto.getEmail());
         provider.setAddress(dto.getAddress());
     }
 }

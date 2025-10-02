@@ -1,6 +1,8 @@
 package sk.zzs.vehicle.management.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +17,8 @@ import sk.zzs.vehicle.management.repository.VehicleRepository;
 import sk.zzs.vehicle.management.repository.NetworkPointRepository;
 
 import java.util.List;
+
+import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @Service
 @Transactional
@@ -95,6 +99,45 @@ public class ProviderService {
 
     public long getProviderNetworkPoints(Long id) {
         return networkPointRepository.countByProviderId(id);
+    }
+
+    public ProviderDto archiveProvider(Long id, String reason) {
+        Provider existing = providerRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Provider not found: " + id));
+
+        // Because of @Where, the managed entity may still read archived=false until cleared/refresh.
+        // Return a DTO based on known state:
+        existing.setArchived(true);
+        return providerMapper.toDto(existing);
+    }
+
+    public ProviderDto unarchiveProvider(Long id) {
+        Provider archivedRef = providerRepository.findArchivedById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Archived provider not found: " + id));
+
+        // Check if provider has active vehicles or network points that would violate constraints
+        long vehicleCount = vehicleRepository.countByProviderId(id);
+        long networkPointCount = networkPointRepository.countByProviderId(id);
+
+        int updated = providerRepository.unarchiveById(id);
+        if (updated == 0) throw new ResponseStatusException(NOT_FOUND, "Provider not found: " + id);
+
+        // Reload (optional) if you need full data; @Where will show it now since archived=false.
+        Provider p = providerRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Provider not found after unarchive: " + id));
+
+        return providerMapper.toDto(p);
+    }
+
+    public Page<ProviderDto> getArchived(Pageable pageable) {
+        return providerRepository.findArchivedNative(pageable).map(providerMapper::toDto);
+    }
+
+    public ProviderDto getArchivedById(Long id) {
+        return providerRepository.findArchivedById(id)
+                .map(providerMapper::toDto)
+                .orElseThrow(() ->
+                        new ResponseStatusException(HttpStatus.NOT_FOUND, "Archived provider not found: " + id));
     }
 
 }

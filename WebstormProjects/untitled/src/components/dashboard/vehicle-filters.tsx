@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { PlusCircle, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,7 @@ type Filters = {
 
 interface VehicleFiltersProps {
     onFilterChange: (filters: Filters) => void;
+    initialFilters?: Filters;
 }
 
 const statusOptions: (VehicleStatus | 'all')[] = [
@@ -38,10 +39,17 @@ const statusLabels: Record<VehicleStatus | 'all', string> = {
 }
 
 
-export default function VehicleFilters({ onFilterChange }: VehicleFiltersProps) {
-    const [filters, setFilters] = useState<Filters>({ query: "", status: "all" });
+export default function VehicleFilters({ onFilterChange, initialFilters }: VehicleFiltersProps) {
+    const [filters, setFilters] = useState<Filters>(initialFilters || { query: "", status: "all" });
+    const didMountRef = useRef(false);
 
     useEffect(() => {
+        // CRITICAL: Skip the first mount invocation - only emit on user changes
+        if (!didMountRef.current) {
+            didMountRef.current = true;
+            return;
+        }
+
         const debouncedFilterChange = setTimeout(() => {
             onFilterChange(filters);
         }, 300);

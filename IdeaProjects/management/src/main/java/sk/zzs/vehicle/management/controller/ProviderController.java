@@ -1,6 +1,8 @@
 package sk.zzs.vehicle.management.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import sk.zzs.vehicle.management.dto.ProviderDto;
@@ -56,7 +58,25 @@ public class ProviderController {
         providerService.deleteProvider(id);
     }
 
+    @PostMapping("/{id}/archive")
+    public ProviderDto archive(@PathVariable Long id,
+                                @RequestParam(value = "reason", required = false) String reason) {
+        return providerService.archiveProvider(id, reason);
+    }
 
+    @PostMapping("/{id}/unarchive")
+    public ProviderDto unarchive(@PathVariable Long id) {
+        return providerService.unarchiveProvider(id);
+    }
 
+    @GetMapping("/archived/page")
+    public Page<ProviderDto> getArchivedPaged(Pageable pageable) {
+        return providerService.getArchived(pageable);
+    }
+
+    @GetMapping("/archived/{id}")
+    public ProviderDto getArchivedProvider(@PathVariable Long id) {
+        return providerService.getArchivedById(id);
+    }
 
 }

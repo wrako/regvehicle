@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlusCircle, MoreHorizontal, SatelliteDish, Trash2 } from "lucide-react";
@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { API_BASE } from "@/constants/api";
+import { cancellableFetch } from "@/utils/fetchUtils";
 
 type AvlDevice = {
     id: number;
@@ -21,20 +22,34 @@ export default function AvlDevicesPage() {
     const { toast } = useToast();
     const [devices, setDevices] = useState<AvlDevice[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
+    const lastQueryKeyRef = useRef<string>("");
+
+    const queryKey = useMemo(() => `${API_BASE}/avl-devices`, []);
 
     const load = useCallback(async () => {
+        // StrictMode guard: prevent duplicate calls
+        if (lastQueryKeyRef.current === queryKey) {
+            return;
+        }
+        lastQueryKeyRef.current = queryKey;
+
         try {
             setLoading(true);
-            const res = await fetch(`${API_BASE}/avl-devices`, { headers: { Accept: "application/json" } });
-            if (!res.ok) throw new Error(await res.text());
-            const data = (await res.json()) as AvlDevice[];
+            const data = await cancellableFetch<AvlDevice[]>(
+                `${API_BASE}/avl-devices`,
+                { headers: { Accept: "application/json" } },
+                "avl-devices-list"
+            );
             setDevices(data);
         } catch (e: any) {
+            // Ignore abort errors
+            if (e.name === 'AbortError') return;
+
             toast({ title: "Nepodarilo sa načítať AVL zariadenia", description: e?.message, variant: "destructive" });
         } finally {
             setLoading(false);
         }
-    }, [toast]);
+    }, [queryKey, toast]);
 
     useEffect(() => { load(); }, [load]);
 
@@ -44,6 +59,8 @@ export default function AvlDevicesPage() {
             const res = await fetch(`${API_BASE}/avl-devices/${id}`, { method: "DELETE" });
             if (!res.ok) throw new Error(await res.text());
             toast({ title: "Zariadenie odstránené" });
+            // Reset ref to allow reload
+            lastQueryKeyRef.current = "";
             await load();
         } catch (e: any) {
             toast({ title: "Chyba pri mazaní", description: e?.message ?? "Skúste znova.", variant: "destructive" });

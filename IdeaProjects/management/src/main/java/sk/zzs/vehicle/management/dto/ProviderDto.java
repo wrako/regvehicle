@@ -11,5 +11,6 @@ public class ProviderDto {
     private Long id;
     private String providerId;
     private String name;
+    private String email;
     private String address;
 }

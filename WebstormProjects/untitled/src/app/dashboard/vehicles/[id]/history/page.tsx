@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, History, MoreHorizontal } from "lucide-react";
@@ -32,6 +32,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { API_BASE } from "@/constants/api";
 import { OperationBadge, type OperationType } from "@/components/common";
+import { cancellableFetch } from "@/utils/fetchUtils";
 
 interface VehicleLog {
     id: number;
@@ -84,9 +85,16 @@ export default function VehicleHistoryPage() {
     const [logs, setLogs] = useState<VehicleLog[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const lastIdRef = useRef<string>("");
 
     useEffect(() => {
         if (!id) return;
+
+        // StrictMode guard: prevent duplicate calls
+        if (lastIdRef.current === id) {
+            return;
+        }
+        lastIdRef.current = id;
 
         (async () => {
             try {

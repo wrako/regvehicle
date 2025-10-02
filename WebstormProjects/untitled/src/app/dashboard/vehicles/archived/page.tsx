@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import {
     Card,
     CardContent,
@@ -11,6 +11,7 @@ import {
 import VehicleTable from "@/components/dashboard/archived-vehicle-table";
 import type { Vehicle, VehicleStatus } from "@/types";
 import { API_BASE } from "@/constants/api";
+import { cancellableFetch } from "@/utils/fetchUtils";
 
 // === Status conversions ===
 const apiToUiStatus: Record<string, VehicleStatus> = {
@@ -55,6 +56,7 @@ function mapApiToUi(v: any): Vehicle {
 export default function ArchivedVehiclesPage() {
     const [vehicles, setVehicles] = useState<Vehicle[]>([]);
     const [loading, setLoading] = useState(false);
+    const lastQueryKeyRef = useRef<string>("");
 
     // Basic pagination params
     const queryParams = useMemo(() => {
@@ -64,26 +66,39 @@ export default function ArchivedVehiclesPage() {
         return params.toString();
     }, []);
 
+    const queryKey = useMemo(() =>
+        `${API_BASE}/vehicles/archived/page?${queryParams}`,
+        [queryParams]
+    );
+
     const load = useCallback(async () => {
+        // StrictMode guard: prevent duplicate calls
+        if (lastQueryKeyRef.current === queryKey) {
+            return;
+        }
+        lastQueryKeyRef.current = queryKey;
+
         setLoading(true);
         try {
-            const res = await fetch(
-                `${API_BASE}/vehicles/archived/page?${queryParams}`,
+            const data = await cancellableFetch(
+                queryKey,
                 {
                     method: "GET",
                     headers: { "Content-Type": "application/json" },
-                }
+                },
+                "archived-vehicles-list"
             );
-            if (!res.ok) throw new Error(await res.text());
-            const data = await res.json();
             setVehicles((data.content || []).map(mapApiToUi));
-        } catch (e) {
+        } catch (e: any) {
+            // Ignore abort errors
+            if (e.name === 'AbortError') return;
+
             console.error("Failed to load archived vehicles:", e);
             setVehicles([]);
         } finally {
             setLoading(false);
         }
-    }, [queryParams]);
+    }, [queryKey]);
 
     useEffect(() => {
         load();

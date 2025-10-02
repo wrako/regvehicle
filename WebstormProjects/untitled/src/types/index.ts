@@ -35,6 +35,7 @@ export type ProviderDto = {
     id?: number;
     providerId: string;
     name: string;
+    email?: string;
     address: string;
     networkPoints?: NetworkPointDto[];
 }

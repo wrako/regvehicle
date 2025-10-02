@@ -1,23 +1,24 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, MoreHorizontal, Building, Trash2, Edit } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Building, Trash2, Edit, Archive } from "lucide-react";
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { API_BASE } from "@/constants/api";
+import { cancellableFetch } from "@/utils/fetchUtils";
 
 type Provider = {
     id: number;
     providerId: string;
     name: string;
+    email?: string;
     address: string;
 };
 
-// NEW: row type including counts
 type ProviderRow = Provider & {
     vehicles: number;
     networkPoints: number;
@@ -25,11 +26,11 @@ type ProviderRow = Provider & {
 
 export default function ProvidersPage() {
     const { toast } = useToast();
-    // CHANGED: items now include counts
     const [items, setItems] = useState<ProviderRow[]>([]);
     const [loading, setLoading] = useState(false);
+    const loadedRef = useRef(false);
+    const lastQueryKeyRef = useRef<string>("");
 
-    // NEW: helpers to get counts from ProviderController
     async function getVehiclesCount(providerId: number): Promise<number> {
         try {
             const res = await fetch(`${API_BASE}/providers/vehicles/${providerId}`);
@@ -38,7 +39,6 @@ export default function ProvidersPage() {
             const n = Number(txt);
             return Number.isFinite(n) ? n : 0;
         } catch {
-            // avoid noisy toasts; just fallback to 0
             return 0;
         }
     }
@@ -55,14 +55,23 @@ export default function ProvidersPage() {
         }
     }
 
+    const queryKey = useMemo(() => `${API_BASE}/providers`, []);
+
     const load = useCallback(async () => {
+        // StrictMode guard: prevent duplicate calls
+        if (lastQueryKeyRef.current === queryKey) {
+            return;
+        }
+        lastQueryKeyRef.current = queryKey;
+
         setLoading(true);
         try {
-            const res = await fetch(`${API_BASE}/providers`, { headers: { Accept: "application/json" } });
-            if (!res.ok) throw new Error(await res.text());
-            const base: Provider[] = await res.json();
+            const base: Provider[] = await cancellableFetch(
+                `${API_BASE}/providers`,
+                { headers: { Accept: "application/json" } },
+                "providers-list"
+            );
 
-            // NEW: fetch counts for each provider in parallel
             const withCounts: ProviderRow[] = await Promise.all(
                 base.map(async (p) => {
                     const [vehicles, networkPoints] = await Promise.all([
@@ -74,7 +83,11 @@ export default function ProvidersPage() {
             );
 
             setItems(withCounts);
+            loadedRef.current = true;
         } catch (e: any) {
+            // Ignore abort errors
+            if (e.name === 'AbortError') return;
+
             toast({
                 title: "Nepodarilo sa načítať poskytovateľov",
                 description: e?.message,
@@ -83,7 +96,7 @@ export default function ProvidersPage() {
         } finally {
             setLoading(false);
         }
-    }, [toast]);
+    }, [queryKey, toast]);
 
     useEffect(() => {
         load();
@@ -106,11 +119,32 @@ export default function ProvidersPage() {
                 throw new Error(errorText);
             }
             toast({ title: "Provider deleted successfully" });
+            // Reset ref to allow reload
+            lastQueryKeyRef.current = "";
             await load();
         } catch (e: any) {
             console.error("Delete error:", e);
             toast({
                 title: "Error deleting provider",
+                description: e?.message ?? "Please try again.",
+                variant: "destructive",
+            });
+        }
+    }
+
+    async function handleArchive(id: number) {
+        if (!confirm("Are you sure you want to archive this provider?")) return;
+        try {
+            const res = await fetch(`${API_BASE}/providers/${id}/archive`, { method: "POST" });
+            if (!res.ok) throw new Error(await res.text());
+            toast({ title: "Provider archived successfully" });
+            // Reset ref to allow reload
+            lastQueryKeyRef.current = "";
+            await load();
+        } catch (e: any) {
+            console.error("Archive error:", e);
+            toast({
+                title: "Error archiving provider",
                 description: e?.message ?? "Please try again.",
                 variant: "destructive",
             });
@@ -129,12 +163,20 @@ export default function ProvidersPage() {
                         <p className="text-muted-foreground">Browse and manage all providers</p>
                     </div>
                 </div>
-                <Button asChild>
-                    <Link href="/dashboard/providers/new">
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        New Provider
-                    </Link>
-                </Button>
+                <div className="flex gap-2">
+                    <Button variant="outline" asChild>
+                        <Link href="/dashboard/providers/archived">
+                            <Archive className="mr-2 h-4 w-4" />
+                            Archived
+                        </Link>
+                    </Button>
+                    <Button asChild>
+                        <Link href="/dashboard/providers/new">
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            New Provider
+                        </Link>
+                    </Button>
+                </div>
             </div>
 
             <Card>
@@ -149,8 +191,8 @@ export default function ProvidersPage() {
                                 <TableRow>
                                     <TableHead>Provider ID</TableHead>
                                     <TableHead>Name</TableHead>
+                                    <TableHead>Email</TableHead>
                                     <TableHead>Address</TableHead>
-                                    {/* NEW: counts columns */}
                                     <TableHead>Vehicles</TableHead>
                                     <TableHead>Network Points</TableHead>
                                     <TableHead>
@@ -161,8 +203,7 @@ export default function ProvidersPage() {
                             <TableBody>
                                 {loading ? (
                                     <TableRow>
-                                        {/* CHANGED colSpan from 4 to 6 */}
-                                        <TableCell colSpan={6} className="text-center h-24">
+                                        <TableCell colSpan={7} className="text-center h-24">
                                             Loading…
                                         </TableCell>
                                     </TableRow>
@@ -171,8 +212,8 @@ export default function ProvidersPage() {
                                         <TableRow key={p.id}>
                                             <TableCell className="font-medium">{p.providerId}</TableCell>
                                             <TableCell>{p.name}</TableCell>
+                                            <TableCell>{p.email || "—"}</TableCell>
                                             <TableCell>{p.address}</TableCell>
-                                            {/* NEW: counts */}
                                             <TableCell>{p.vehicles}</TableCell>
                                             <TableCell>{p.networkPoints}</TableCell>
                                             <TableCell className="text-right">
@@ -191,6 +232,12 @@ export default function ProvidersPage() {
                                                             </Link>
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem
+                                                            onClick={() => handleArchive(p.id)}
+                                                        >
+                                                            <Archive className="mr-2 h-4 w-4" />
+                                                            Archive
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
                                                             className="text-destructive"
                                                             onClick={() => handleDelete(p.id)}
                                                         >
@@ -204,8 +251,7 @@ export default function ProvidersPage() {
                                     ))
                                 ) : (
                                     <TableRow>
-                                        {/* CHANGED colSpan from 4 to 6 */}
-                                        <TableCell colSpan={6} className="h-24 text-center">
+                                        <TableCell colSpan={7} className="h-24 text-center">
                                             No providers found.
                                         </TableCell>
                                     </TableRow>

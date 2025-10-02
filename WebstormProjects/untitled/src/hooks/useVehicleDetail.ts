@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { API_BASE } from "@/constants/api";
+import { cancellableFetch } from "@/utils/fetchUtils";
 
 interface VehicleDto {
     id: number;
@@ -41,33 +42,59 @@ export function useVehicleDetail(id: string) {
     const [networkPoint, setNetworkPoint] = useState<NetworkPoint | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
+    const lastIdRef = useRef<string>("");
 
     useEffect(() => {
         if (!id) return;
 
+        // StrictMode guard: prevent duplicate calls
+        if (lastIdRef.current === id) {
+            return;
+        }
+        lastIdRef.current = id;
+
         (async () => {
             try {
                 setLoading(true);
-                const res = await fetch(`${API_BASE}/vehicles/${id}`);
-                if (!res.ok) throw new Error(await res.text());
-                const dto: VehicleDto = await res.json();
+                const dto: VehicleDto = await cancellableFetch(
+                    `${API_BASE}/vehicles/${id}`,
+                    {},
+                    `vehicle-detail-${id}`
+                );
                 setVehicle(dto);
 
                 // Fetch related entities in parallel
+                const promises = [];
+
                 if (dto.providerId) {
-                    fetch(`${API_BASE}/providers/${dto.providerId}`)
-                        .then((r) => (r.ok ? r.json() : null))
-                        .then(setProvider)
-                        .catch(() => null);
+                    promises.push(
+                        cancellableFetch<Provider>(
+                            `${API_BASE}/providers/${dto.providerId}`,
+                            {},
+                            `provider-${dto.providerId}`
+                        )
+                            .then(setProvider)
+                            .catch(() => setProvider(null))
+                    );
                 }
 
                 if (dto.networkPointId) {
-                    fetch(`${API_BASE}/network-points/${dto.networkPointId}`)
-                        .then((r) => (r.ok ? r.json() : null))
-                        .then(setNetworkPoint)
-                        .catch(() => null);
+                    promises.push(
+                        cancellableFetch<NetworkPoint>(
+                            `${API_BASE}/network-points/${dto.networkPointId}`,
+                            {},
+                            `network-point-${dto.networkPointId}`
+                        )
+                            .then(setNetworkPoint)
+                            .catch(() => setNetworkPoint(null))
+                    );
                 }
+
+                await Promise.all(promises);
             } catch (e: any) {
+                // Ignore abort errors
+                if (e.name === 'AbortError') return;
+
                 console.error(e);
                 setError("Nepodarilo sa načítať vozidlo.");
             } finally {

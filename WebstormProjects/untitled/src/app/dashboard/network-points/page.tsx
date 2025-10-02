@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlusCircle, MoreHorizontal, MapPin, Trash2, Edit, Archive, Clock } from "lucide-react";
@@ -13,6 +13,7 @@ import { sk } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { API_BASE } from "@/constants/api";
 import { runExpireCheckNetworkPoints } from "@/lib/api";
+import { cancellableFetch } from "@/utils/fetchUtils";
 
 type NetworkPointType = "RLP" | "RV" | "RZP" | "OTHER";
 type NetworkPoint = {
@@ -43,20 +44,34 @@ export default function NetworkPointsPage() {
     const [items, setItems] = useState<NetworkPoint[]>([]);
     const [loading, setLoading] = useState(false);
     const [checkingExpired, setCheckingExpired] = useState(false);
+    const lastQueryKeyRef = useRef<string>("");
+
+    const queryKey = useMemo(() => `${API_BASE}/network-points`, []);
 
     const load = useCallback(async () => {
+        // StrictMode guard: prevent duplicate calls
+        if (lastQueryKeyRef.current === queryKey) {
+            return;
+        }
+        lastQueryKeyRef.current = queryKey;
+
         setLoading(true);
         try {
-            const res = await fetch(`${API_BASE}/network-points`, { headers: { Accept: "application/json" } });
-            if (!res.ok) throw new Error(await res.text());
-            const data = (await res.json()) as NetworkPoint[];
+            const data = await cancellableFetch<NetworkPoint[]>(
+                `${API_BASE}/network-points`,
+                { headers: { Accept: "application/json" } },
+                "network-points-list"
+            );
             setItems(data);
         } catch (e: any) {
+            // Ignore abort errors
+            if (e.name === 'AbortError') return;
+
             toast({ title: "Nepodarilo sa načítať body siete", description: e?.message, variant: "destructive" });
         } finally {
             setLoading(false);
         }
-    }, [toast]);
+    }, [queryKey, toast]);
 
     useEffect(() => { load(); }, [load]);
 
@@ -107,6 +122,8 @@ export default function NetworkPointsPage() {
                 throw new Error(errorText);
             }
             toast({ title: "Network point deleted successfully" });
+            // Reset ref to allow reload
+            lastQueryKeyRef.current = "";
             await load();
         } catch (e: any) {
             console.error("Delete error:", e);
@@ -120,6 +137,8 @@ export default function NetworkPointsPage() {
             const res = await fetch(`${API_BASE}/network-points/${id}/archive`, { method: "POST" });
             if (!res.ok) throw new Error(await res.text());
             toast({ title: "Network point archived successfully" });
+            // Reset ref to allow reload
+            lastQueryKeyRef.current = "";
             await load();
         } catch (e: any) {
             console.error("Archive error:", e);

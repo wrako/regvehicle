@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { UseFormReturn } from "react-hook-form";
 import { getNetworkPoint, updateNetworkPoint, getProviders } from "@/lib/api";
@@ -24,9 +24,16 @@ export function useNetworkPointEdit({ id, form, toast }: UseNetworkPointEditProp
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [providers, setProviders] = useState<any[]>([]);
+    const lastIdRef = useRef<number>(0);
 
     useEffect(() => {
         if (!id) return;
+
+        // StrictMode guard: prevent duplicate calls
+        if (lastIdRef.current === id) {
+            return;
+        }
+        lastIdRef.current = id;
 
         const loadNetworkPoint = async () => {
             try {

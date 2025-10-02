@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import {
     Card,
     CardContent,
@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Archive } from "lucide-react";
 import Link from "next/link";
 import { API_BASE } from "@/constants/api";
+import { cancellableFetch } from "@/utils/fetchUtils";
 
 const uiToApiStatus: Record<VehicleStatus, string> = {
     aktívne: "ACTIVE",
@@ -68,9 +69,10 @@ export default function DashboardPage() {
     const [vehicles, setVehicles] = useState<Vehicle[]>([]);
     const [filters, setFilters] = useState<{ query: string; status: VehicleStatus | "all" }>({
         query: "",
-        status: "aktívne",
+        status: "all",
     });
     const [loading, setLoading] = useState(false);
+    const lastQueryKeyRef = useRef<string>("");
 
     const queryParams = useMemo(() => {
         const params = new URLSearchParams();
@@ -83,25 +85,41 @@ export default function DashboardPage() {
         return params.toString();
     }, [filters]);
 
+    const queryKey = useMemo(() =>
+        `${API_BASE}/vehicles?${queryParams}`,
+        [queryParams]
+    );
+
     const load = useCallback(async () => {
+        // StrictMode guard: prevent duplicate calls
+        if (lastQueryKeyRef.current === queryKey) {
+            return;
+        }
+        lastQueryKeyRef.current = queryKey;
+
         setLoading(true);
         try {
-            const res = await fetch(`${API_BASE}/vehicles?${queryParams}`, {
-                method: "GET",
-                headers: { "Content-Type": "application/json" },
-            });
-            if (!res.ok) throw new Error(await res.text());
-            const data = await res.json();
+            const data = await cancellableFetch(
+                queryKey,
+                {
+                    method: "GET",
+                    headers: { "Content-Type": "application/json" },
+                },
+                "vehicles-list"
+            );
 
             // Spring Data Page response: data.content holds entities
             setVehicles((data.content || []).map(mapApiToUi));
-        } catch (e) {
+        } catch (e: any) {
+            // Ignore abort errors
+            if (e.name === 'AbortError') return;
+
             console.error("Failed to load vehicles:", e);
             setVehicles([]);
         } finally {
             setLoading(false);
         }
-    }, [queryParams]);
+    }, [queryKey]);
 
     useEffect(() => {
         load();
@@ -125,7 +143,10 @@ export default function DashboardPage() {
                     </Button>
                 </CardHeader>
                 <CardContent>
-                    <VehicleFilters onFilterChange={(f) => setFilters(f)} />
+                    <VehicleFilters
+                        onFilterChange={(f) => setFilters(f)}
+                        initialFilters={filters}
+                    />
                     {loading && (
                         <div className="text-sm text-muted-foreground py-2">Načítavam…</div>
                     )}
