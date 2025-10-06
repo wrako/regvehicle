@@ -1,6 +1,6 @@
-import { format } from "date-fns";
 import { API_BASE } from "@/lib/api";
 import { checkProviderCapacity } from "@/utils";
+import { toApiDate } from "@/lib/date";
 
 type NetworkPointFormValues = {
     code: string;
@@ -29,8 +29,8 @@ export async function submitNetworkPoint(
         code: values.code,
         name: values.name,
         type: values.type,
-        validFrom: values.validFrom ? format(values.validFrom, "yyyy-MM-dd") : null,
-        validTo: values.validTo ? format(values.validTo, "yyyy-MM-dd") : null,
+        validFrom: toApiDate(values.validFrom) ?? null,
+        validTo: toApiDate(values.validTo) ?? null,
         providerId: values.providerId,
     };
 

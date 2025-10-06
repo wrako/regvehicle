@@ -10,18 +10,7 @@ import {
     type EditInitial,
 } from "@/components/dashboard/edit-vehicle-form";
 import { API_BASE } from "@/constants/api";
-
-function parseLocalDate(s?: string | null) {
-    if (!s) return undefined;
-    const [y, m, d] = String(s).split("-").map(Number);
-    const dt = new Date(y, (m || 1) - 1, d || 1);
-    return isNaN(dt.getTime()) ? undefined : dt;
-}
-
-function formatDate(d?: Date): string | undefined {
-    if (!d) return undefined;
-    return d.toISOString().split("T")[0];
-}
+import { fromApiDate } from "@/lib/date";
 
 function mapStatusToUi(s: any): EditInitial["status"] {
     const v = String(s || "").toUpperCase();
@@ -40,15 +29,9 @@ function normaliseToInitial(api: any): EditInitial {
         model: api.model ?? "",
         // pick VIN from common API shapes
         vinNum: api.vinNum ?? api.vin ?? api.vin_num ?? api.vinnum ?? "",
-        firstRegistrationDate: formatDate(
-            parseLocalDate(api.firstRegistrationDate ?? api.firstRegistration)
-        ),
-        lastTechnicalCheckDate: formatDate(
-            parseLocalDate(api.lastTechnicalCheckDate ?? api.lastDateSTK)
-        ),
-        technicalCheckValidUntil: formatDate(
-            parseLocalDate(api.technicalCheckValidUntil ?? api.expiryDateSTK)
-        ),
+        firstRegistrationDate: fromApiDate(api.firstRegistrationDate ?? api.firstRegistration) ?? null,
+        lastTechnicalCheckDate: fromApiDate(api.lastTechnicalCheckDate ?? api.lastDateSTK) ?? null,
+        technicalCheckValidUntil: fromApiDate(api.technicalCheckValidUntil ?? api.expiryDateSTK) ?? null,
         status: mapStatusToUi(api.status),
         providerId: String(api.providerId ?? api.provider?.id ?? ""),
         avlDeviceId: String(api.avlDeviceId ?? api.avlDevice?.id ?? ""),

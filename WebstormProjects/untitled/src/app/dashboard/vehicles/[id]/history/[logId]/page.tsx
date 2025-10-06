@@ -4,12 +4,20 @@ import { notFound, useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, FileDiff } from "lucide-react";
 import Link from "next/link";
-import { format } from "date-fns";
-import { sk } from "date-fns/locale";
+import { format, isValid } from "date-fns";
 import * as React from "react";
 import { fetchVehicle, fetchHistory, getChanges } from "@/utils/historyHelpers";
 import type { Vehicle, VehicleLog } from "@/utils/historyHelpers";
 import { LogComparisonCard } from "@/components/dashboard/history";
+import { formatDate } from "@/lib/date";
+
+function formatDateTime(value?: Date | null): string {
+    if (!value || !isValid(value)) return "";
+    const datePart = formatDate(value);
+    if (!datePart) return "";
+    const timePart = format(value, "HH:mm:ss");
+    return timePart ? `${datePart} ${timePart}` : datePart;
+}
 
 export default function LogComparisonPage() {
     const params = useParams();
@@ -81,7 +89,7 @@ export default function LogComparisonPage() {
                         <span className="font-semibold text-foreground">{currentLog.author}</span>{" "}
                         dňa{" "}
                         <span className="font-semibold text-foreground">
-              {format(currentLog.timestamp, "dd.MM.yyyy HH:mm:ss", { locale: sk })}
+              {formatDateTime(currentLog.timestamp)}
             </span>
                     </p>
                 </div>
@@ -92,7 +100,7 @@ export default function LogComparisonPage() {
                     <LogComparisonCard
                         log={previousLog}
                         title="Predchádzajúca verzia"
-                        description={`Stav pred zmenou z ${format(previousLog.timestamp, "dd.MM.yyyy HH:mm:ss")}`}
+                        description={`Stav pred zmenou z ${formatDateTime(previousLog.timestamp)}`}
                     />
                 ) : (
                     <div className="text-muted-foreground text-center py-8">Žiadna predchádzajúca verzia.</div>

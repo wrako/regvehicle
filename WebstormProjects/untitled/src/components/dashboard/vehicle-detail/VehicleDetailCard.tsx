@@ -1,6 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { format } from "date-fns";
-import { sk } from "date-fns/locale";
+import { formatDate } from "@/lib/date";
 import { Badge } from "@/components/ui/badge";
 
 type Vehicle = {
@@ -19,15 +18,6 @@ type Vehicle = {
 type Props = {
     vehicle: Vehicle;
 };
-
-function formatDate(dateStr?: string) {
-    if (!dateStr) return "N/A";
-    try {
-        return format(new Date(dateStr), "dd.MM.yyyy", { locale: sk });
-    } catch {
-        return "N/A";
-    }
-}
 
 function getStatusBadge(status: string) {
     const statusMap: Record<string, { variant: any; label: string }> = {
@@ -73,18 +63,18 @@ export function VehicleDetailCard({ vehicle }: Props) {
                 <div className="grid grid-cols-2 gap-4">
                     <div>
                         <p className="text-sm font-medium text-muted-foreground">Prvá registrácia</p>
-                        <p>{formatDate(vehicle.firstRegistrationDate)}</p>
+                        <p>{formatDate(vehicle.firstRegistrationDate) || "N/A"}</p>
                     </div>
                     <div>
                         <p className="text-sm font-medium text-muted-foreground">Posledná STK</p>
-                        <p>{formatDate(vehicle.lastTechnicalCheckDate)}</p>
+                        <p>{formatDate(vehicle.lastTechnicalCheckDate) || "N/A"}</p>
                     </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                     <div>
                         <p className="text-sm font-medium text-muted-foreground">Platnosť STK</p>
-                        <p>{formatDate(vehicle.technicalCheckValidUntil)}</p>
+                        <p>{formatDate(vehicle.technicalCheckValidUntil) || "N/A"}</p>
                     </div>
                     <div>
                         <p className="text-sm font-medium text-muted-foreground">Stav</p>

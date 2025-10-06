@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { format } from "date-fns";
 import { LogDetailItem } from "./LogDetailItem";
 import type { VehicleLog, LogChanges } from "@/utils/historyHelpers";
+import { formatDate } from "@/lib/date";
 
 type Props = {
     log: VehicleLog;
@@ -12,6 +12,21 @@ type Props = {
 };
 
 export function LogComparisonCard({ log, title, description, changes = {}, highlighted }: Props) {
+    const firstRegistrationValue = formatDate(log.firstRegistrationDate);
+    const lastTechnicalCheckValue = formatDate(log.lastTechnicalCheckDate ?? undefined);
+    const technicalCheckValidUntilValue = formatDate(log.technicalCheckValidUntil);
+
+    const firstRegistration =
+        log.firstRegistrationDate.getTime() && firstRegistrationValue ? firstRegistrationValue : "N/A";
+    const lastTechnicalCheck =
+        log.lastTechnicalCheckDate && log.lastTechnicalCheckDate.getTime() && lastTechnicalCheckValue
+            ? lastTechnicalCheckValue
+            : "N/A";
+    const technicalCheckValidUntil =
+        log.technicalCheckValidUntil.getTime() && technicalCheckValidUntilValue
+            ? technicalCheckValidUntilValue
+            : "N/A";
+
     return (
         <Card className={highlighted ? "ring-2 ring-yellow-400" : ""}>
             <CardHeader>
@@ -24,29 +39,17 @@ export function LogComparisonCard({ log, title, description, changes = {}, highl
                 <LogDetailItem label="Model" value={log.model} changed={changes.model} />
                 <LogDetailItem
                     label="Dátum prvej registrácie"
-                    value={
-                        log.firstRegistrationDate.getTime()
-                            ? format(log.firstRegistrationDate, "dd.MM.yyyy")
-                            : "N/A"
-                    }
+                    value={firstRegistration}
                     changed={changes.firstRegistrationDate}
                 />
                 <LogDetailItem
                     label="Dátum poslednej STK"
-                    value={
-                        log.lastTechnicalCheckDate?.getTime()
-                            ? format(log.lastTechnicalCheckDate, "dd.MM.yyyy")
-                            : "N/A"
-                    }
+                    value={lastTechnicalCheck}
                     changed={changes.lastTechnicalCheckDate}
                 />
                 <LogDetailItem
                     label="Platnosť STK do"
-                    value={
-                        log.technicalCheckValidUntil.getTime()
-                            ? format(log.technicalCheckValidUntil, "dd.MM.yyyy")
-                            : "N/A"
-                    }
+                    value={technicalCheckValidUntil}
                     changed={changes.technicalCheckValidUntil}
                 />
                 <LogDetailItem label="Stav" value={log.status} changed={changes.status} />

@@ -16,6 +16,7 @@ import { Archive } from "lucide-react";
 import Link from "next/link";
 import { API_BASE } from "@/constants/api";
 import { cancellableFetch } from "@/utils/fetchUtils";
+import { fromApiDate } from "@/lib/date";
 
 const uiToApiStatus: Record<VehicleStatus, string> = {
     aktívne: "ACTIVE",
@@ -34,10 +35,7 @@ const apiToUiStatus: Record<string, VehicleStatus> = {
 };
 
 function toDateOrNull(s?: string | null) {
-    if (!s) return null;
-    const [y, m, d] = s.split("-").map(Number);
-    const dt = new Date(y, (m || 1) - 1, d || 1);
-    return isNaN(dt.getTime()) ? null : dt;
+    return fromApiDate(s ?? undefined) ?? null;
 }
 
 function mapApiToUi(v: any): Vehicle {
@@ -54,8 +52,8 @@ function mapApiToUi(v: any): Vehicle {
         networkPointLabel: v.networkPointName || "—",
 
         status: apiToUiStatus[v.status] || "aktívne",
-        stkDate: toDateOrNull(v.technicalCheckValidUntil) as any,
-        firstRegistration: toDateOrNull(v.firstRegistrationDate) as any,
+        stkDate: toDateOrNull(v.technicalCheckValidUntil),
+        firstRegistration: toDateOrNull(v.firstRegistrationDate),
 
         rdstModel: v.rdstDeviceId ? String(v.rdstDeviceId) : "",
         rdstId: v.rdstDeviceId ? String(v.rdstDeviceId) : "",

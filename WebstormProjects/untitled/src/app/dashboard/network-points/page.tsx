@@ -8,12 +8,11 @@ import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
-import { sk } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { API_BASE } from "@/constants/api";
 import { runExpireCheckNetworkPoints } from "@/lib/api";
 import { cancellableFetch } from "@/utils/fetchUtils";
+import { formatDate } from "@/lib/date";
 
 type NetworkPointType = "RLP" | "RV" | "RZP" | "OTHER";
 type NetworkPoint = {
@@ -31,13 +30,6 @@ const typeLabels: Record<NetworkPointType, string> = {
     RZP: "RZP",
     OTHER: "Other",
 };
-
-function parseLocalDate(s?: string | null): Date | null {
-    if (!s) return null;
-    const [y, m, d] = s.split("-").map(Number);
-    const dt = new Date(y, (m || 1) - 1, d || 1);
-    return isNaN(dt.getTime()) ? null : dt;
-}
 
 export default function NetworkPointsPage() {
     const { toast } = useToast();
@@ -212,51 +204,47 @@ export default function NetworkPointsPage() {
                                         <TableCell colSpan={6} className="h-24 text-center">Loading…</TableCell>
                                     </TableRow>
                                 ) : items.length > 0 ? (
-                                    items.map((point) => {
-                                        const vf = parseLocalDate(point.validFrom);
-                                        const vt = parseLocalDate(point.validTo);
-                                        return (
-                                            <TableRow key={point.id}>
-                                                <TableCell className="font-medium">{point.code}</TableCell>
-                                                <TableCell>{point.name}</TableCell>
-                                                <TableCell><Badge variant="outline">{typeLabels[point.type]}</Badge></TableCell>
-                                                <TableCell>{vf ? format(vf, "dd.MM.yyyy", { locale: sk }) : "-"}</TableCell>
-                                                <TableCell>{vt ? format(vt, "dd.MM.yyyy", { locale: sk }) : "-"}</TableCell>
-                                                <TableCell className="text-right">
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button aria-haspopup="true" size="icon" variant="ghost">
-                                                                <MoreHorizontal className="h-4 w-4" />
-                                                                <span className="sr-only">Toggle menu</span>
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                            <DropdownMenuItem asChild>
-                                                                <Link href={`/dashboard/network-points/${point.id}/edit`}>
-                                                                    <Edit className="mr-2 h-4 w-4" />
-                                                                    Edit
-                                                                </Link>
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem
-                                                                onClick={() => handleArchive(point.id)}
-                                                            >
-                                                                <Archive className="mr-2 h-4 w-4" />
-                                                                Archive
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem
-                                                                className="text-destructive focus:text-destructive-foreground focus:bg-destructive"
-                                                                onClick={() => handleDelete(point.id)}
-                                                            >
-                                                                <Trash2 className="mr-2 h-4 w-4" />
-                                                                Delete
-                                                            </DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </TableCell>
-                                            </TableRow>
-                                        );
-                                    })
+                                    items.map((point) => (
+                                        <TableRow key={point.id}>
+                                            <TableCell className="font-medium">{point.code}</TableCell>
+                                            <TableCell>{point.name}</TableCell>
+                                            <TableCell><Badge variant="outline">{typeLabels[point.type]}</Badge></TableCell>
+                                            <TableCell>{formatDate(point.validFrom) || "-"}</TableCell>
+                                            <TableCell>{formatDate(point.validTo) || "-"}</TableCell>
+                                            <TableCell className="text-right">
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                            <MoreHorizontal className="h-4 w-4" />
+                                                            <span className="sr-only">Toggle menu</span>
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                        <DropdownMenuItem asChild>
+                                                            <Link href={`/dashboard/network-points/${point.id}/edit`}>
+                                                                <Edit className="mr-2 h-4 w-4" />
+                                                                Edit
+                                                            </Link>
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            onClick={() => handleArchive(point.id)}
+                                                        >
+                                                            <Archive className="mr-2 h-4 w-4" />
+                                                            Archive
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            className="text-destructive focus:text-destructive-foreground focus:bg-destructive"
+                                                            onClick={() => handleDelete(point.id)}
+                                                        >
+                                                            <Trash2 className="mr-2 h-4 w-4" />
+                                                            Delete
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
                                 ) : (
                                     <TableRow>
                                         <TableCell colSpan={6} className="h-24 text-center">

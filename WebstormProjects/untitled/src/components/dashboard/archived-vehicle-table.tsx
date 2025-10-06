@@ -19,8 +19,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { Vehicle, VehicleStatus } from "@/types";
-import { format } from "date-fns";
-import { sk } from "date-fns/locale";
+import { formatDate } from "@/lib/date";
 import Link from "next/link";
 import * as React from "react";
 import { UnarchiveDialog } from "./unarchive-dialog";
@@ -119,11 +118,7 @@ export default function ArchivedVehicleTable({ vehicles }: VehicleTableProps) {
                                     <StatusBadge status={vehicle.status} />
                                 </TableCell>
                                 <TableCell className="hidden lg:table-cell">
-                                    {vehicle.stkDate
-                                        ? format(vehicle.stkDate as any, "dd. MMMM yyyy", {
-                                            locale: sk,
-                                        })
-                                        : "—"}
+                                    {formatDate(vehicle.stkDate) || "—"}
                                 </TableCell>
                                 <TableCell>
                                     <DropdownMenu>

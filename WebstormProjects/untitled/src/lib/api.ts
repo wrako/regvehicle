@@ -202,6 +202,18 @@ export async function runExpireCheckNetworkPoints() {
     return await res.json();
 }
 
+export async function runProviderEmptyCheck() {
+    const res = await fetch(`${API_BASE}/providers/empty-check`, {
+        method: "POST",
+        credentials: "include",
+    });
+    if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `Provider empty check failed: ${res.status}`);
+    }
+    return await res.json();
+}
+
 export async function archiveProvider(id: number, params?: { reason?: string }) {
     const url = new URL(`${API_BASE}/providers/${id}/archive`);
     if (params?.reason) {

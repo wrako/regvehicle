@@ -11,6 +11,7 @@ import sk.zzs.vehicle.management.service.ProviderService;
 import sk.zzs.vehicle.management.service.VehicleService;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/providers")
@@ -77,6 +78,15 @@ public class ProviderController {
     @GetMapping("/archived/{id}")
     public ProviderDto getArchivedProvider(@PathVariable Long id) {
         return providerService.getArchivedById(id);
+    }
+
+    /**
+     * Manual trigger: find and archive all active providers with zero active network points.
+     * Returns summary JSON: { checked, archived, skippedArchived, errors? }
+     */
+    @PostMapping("/empty-check")
+    public Map<String, Object> checkProvidersWithoutNetworkPoints() {
+        return providerService.checkAndArchiveProvidersWithoutNetworkPoints();
     }
 
 }

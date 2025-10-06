@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 import sk.zzs.vehicle.management.entity.Provider;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface ProviderRepository extends JpaRepository<Provider, Long> {
@@ -27,4 +28,26 @@ public interface ProviderRepository extends JpaRepository<Provider, Long> {
 
     @Query(value = "SELECT * FROM provider WHERE id = :id AND archived = true", nativeQuery = true)
     Optional<Provider> findArchivedById(@Param("id") Long id);
+
+    /**
+     * Find provider by ID, ignoring the @Where clause (both active and archived).
+     * Used when mapping archived vehicles to include their archived provider.
+     */
+    @Query(value = "SELECT * FROM provider WHERE id = :id", nativeQuery = true)
+    Optional<Provider> findByIdIncludingArchived(@Param("id") Long id);
+
+    /**
+     * Find all active providers that have zero active network points.
+     * Active = archived=false for both Provider and NetworkPoint.
+     */
+    @Query(value = """
+        SELECT p.* FROM provider p
+        WHERE p.archived = false
+        AND NOT EXISTS (
+            SELECT 1 FROM network_point np
+            WHERE np.provider_id = p.id
+            AND np.archived = false
+        )
+        """, nativeQuery = true)
+    List<Provider> findActiveProvidersWithoutNetworkPoints();
 }

@@ -1,6 +1,7 @@
 package sk.zzs.vehicle.management.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -16,7 +17,10 @@ import sk.zzs.vehicle.management.repository.ProviderRepository;
 import sk.zzs.vehicle.management.repository.VehicleRepository;
 import sk.zzs.vehicle.management.repository.NetworkPointRepository;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
@@ -34,6 +38,10 @@ public class ProviderService {
 
     @Autowired
     private ProviderMapper providerMapper;
+
+    @Autowired
+    @Lazy
+    private VehicleService vehicleService;
 
     @Transactional(readOnly = true)
     public List<ProviderDto> getAllProviders() {
@@ -105,6 +113,29 @@ public class ProviderService {
         Provider existing = providerRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Provider not found: " + id));
 
+        // 1. Archive all vehicles assigned to this provider
+        List<sk.zzs.vehicle.management.entity.Vehicle> vehicles =
+            existing.getVehicles();
+        for (sk.zzs.vehicle.management.entity.Vehicle vehicle : vehicles) {
+            if (!vehicle.isArchived()) {
+                vehicleService.archiveVehicle(
+                    vehicle.getId(),
+                    "Provider archived: " + (reason != null ? reason : ""),
+                    vehicle.getStatus()
+                );
+            }
+        }
+
+        // 2. Unassign all network points from this provider
+        List<sk.zzs.vehicle.management.entity.NetworkPoint> networkPoints =
+            existing.getNetworkPoints();
+        for (sk.zzs.vehicle.management.entity.NetworkPoint np : networkPoints) {
+            if (!np.isArchived()) {
+                np.setProvider(null);
+            }
+        }
+
+        // 3. Archive the provider
         // Because of @Where, the managed entity may still read archived=false until cleared/refresh.
         // Return a DTO based on known state:
         existing.setArchived(true);
@@ -138,6 +169,45 @@ public class ProviderService {
                 .map(providerMapper::toDto)
                 .orElseThrow(() ->
                         new ResponseStatusException(HttpStatus.NOT_FOUND, "Archived provider not found: " + id));
+    }
+
+    /**
+     * Find all active providers with zero active network points and archive them.
+     * Returns summary: { checked, archived, skippedArchived, errors }
+     */
+    public Map<String, Object> checkAndArchiveProvidersWithoutNetworkPoints() {
+        List<Provider> candidates = providerRepository.findActiveProvidersWithoutNetworkPoints();
+
+        int checked = candidates.size();
+        int archived = 0;
+        int skippedArchived = 0;
+        List<String> errors = new ArrayList<>();
+
+        for (Provider provider : candidates) {
+            try {
+                // Double-check not already archived (paranoid check)
+                if (provider.isArchived()) {
+                    skippedArchived++;
+                    continue;
+                }
+
+                // Archive with reason
+                archiveProvider(provider.getId(), "No network points");
+                archived++;
+            } catch (Exception e) {
+                errors.add("Provider ID " + provider.getId() + ": " + e.getMessage());
+            }
+        }
+
+        Map<String, Object> summary = new HashMap<>();
+        summary.put("checked", checked);
+        summary.put("archived", archived);
+        summary.put("skippedArchived", skippedArchived);
+        if (!errors.isEmpty()) {
+            summary.put("errors", errors);
+        }
+
+        return summary;
     }
 
 }

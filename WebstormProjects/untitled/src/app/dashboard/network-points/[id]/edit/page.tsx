@@ -21,8 +21,8 @@ export default function EditNetworkPointPage() {
             code: "",
             name: "",
             type: "RLP",
-            validFrom: "",
-            validTo: "",
+            validFrom: null,
+            validTo: null,
             providerId: 0,
         },
     });

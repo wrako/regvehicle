@@ -15,7 +15,7 @@ import java.util.List;
 @Entity
 // NEW: one active row per VIN; allow duplicates only when archived=true
 @Table(name = "vehicle", uniqueConstraints = {
-        @UniqueConstraint(name = "uniq_vehicle_vin_archived", columnNames = {"vin_num", "archived"})
+        @UniqueConstraint(name = "uniq_vehicle_vin_archived", columnNames = {"vin_num","provider_id", "archived"})
 })
 @Data
 @EntityListeners(VehicleListener.class)
@@ -53,7 +53,7 @@ public class Vehicle {
     private VehicleStatus status;
 
     // relations
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "provider_id")
     private Provider provider;
 

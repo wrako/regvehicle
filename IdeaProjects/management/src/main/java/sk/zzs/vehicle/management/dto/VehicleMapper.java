@@ -4,22 +4,47 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Component;
 import sk.zzs.vehicle.management.entity.*;
+import sk.zzs.vehicle.management.repository.ProviderRepository;
 import sk.zzs.vehicle.management.service.ProviderService;
 
 @Component
 public class VehicleMapper {
 
     private final ProviderService providerService;
+    private final ProviderRepository providerRepository;
 
     @PersistenceContext
     private EntityManager em;
 
-    public VehicleMapper(ProviderService providerService) {
+    public VehicleMapper(ProviderService providerService, ProviderRepository providerRepository) {
         this.providerService = providerService;
+        this.providerRepository = providerRepository;
     }
 
     public VehicleDto toDto(Vehicle v) {
         if (v == null) return null;
+
+        // When vehicle is archived, resolve provider from archived source (bypassing @Where filter)
+        Provider provider = null;
+        Long providerId = null;
+        String providerName = null;
+
+        if (v.isArchived()) {
+            // For archived vehicles, query provider_id directly to avoid Hibernate proxy issues
+            Object providerIdObj = em.createNativeQuery("SELECT provider_id FROM vehicle WHERE id = :id")
+                    .setParameter("id", v.getId())
+                    .getSingleResult();
+            if (providerIdObj != null) {
+                providerId = ((Number) providerIdObj).longValue();
+                provider = providerRepository.findByIdIncludingArchived(providerId).orElse(null);
+                providerName = provider != null ? provider.getName() : null;
+            }
+        } else {
+            // For active vehicles, use the standard relationship (already filtered by @Where)
+            provider = v.getProvider();
+            providerId = provider != null ? provider.getId() : null;
+            providerName = provider != null ? provider.getName() : null;
+        }
 
         return VehicleDto.builder()
                 .id(v.getId())
@@ -31,8 +56,8 @@ public class VehicleMapper {
                 .lastTechnicalCheckDate(v.getLastTechnicalCheckDate())
                 .technicalCheckValidUntil(v.getTechnicalCheckValidUntil())
                 .status(v.getStatus())
-                .providerId(v.getProvider() != null ? v.getProvider().getId() : null)
-                .providerName(v.getProvider() != null ? v.getProvider().getName() : null)
+                .providerId(providerId)
+                .providerName(providerName)
 //                .avlDeviceId(v.getAvlDevice() != null ? v.getAvlDevice().getId() : null)
 //                .rdstDeviceId(v.getRdstDevice() != null ? v.getRdstDevice().getId() : null)
 

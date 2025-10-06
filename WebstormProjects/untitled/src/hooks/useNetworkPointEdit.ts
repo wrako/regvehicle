@@ -3,19 +3,12 @@ import { useRouter } from "next/navigation";
 import { UseFormReturn } from "react-hook-form";
 import { getNetworkPoint, updateNetworkPoint, getProviders } from "@/lib/api";
 import type { NetworkPointDto } from "@/types";
-
-type NetworkPointFormData = {
-    code: string;
-    name: string;
-    type: "RLP" | "RV" | "RZP" | "OTHER";
-    validFrom?: string;
-    validTo?: string;
-    providerId: number;
-};
+import type { NetworkPointEditFormData } from "@/utils/networkPointSchema";
+import { fromApiDate, toApiDate } from "@/lib/date";
 
 type UseNetworkPointEditProps = {
     id: number;
-    form: UseFormReturn<NetworkPointFormData>;
+    form: UseFormReturn<NetworkPointEditFormData>;
     toast: any;
 };
 
@@ -46,9 +39,9 @@ export function useNetworkPointEdit({ id, form, toast }: UseNetworkPointEditProp
                 form.reset({
                     code: networkPoint.code,
                     name: networkPoint.name,
-                    type: networkPoint.type as NetworkPointFormData["type"],
-                    validFrom: networkPoint.validFrom || "",
-                    validTo: networkPoint.validTo || "",
+                    type: networkPoint.type as NetworkPointEditFormData["type"],
+                    validFrom: fromApiDate(networkPoint.validFrom) ?? null,
+                    validTo: fromApiDate(networkPoint.validTo) ?? null,
                     providerId: networkPoint.providerId || 0,
                 });
             } catch (error: any) {
@@ -75,13 +68,13 @@ export function useNetworkPointEdit({ id, form, toast }: UseNetworkPointEditProp
         loadNetworkPoint();
     }, [id, form, toast, router]);
 
-    const onSubmit = async (data: NetworkPointFormData) => {
+    const onSubmit = async (data: NetworkPointEditFormData) => {
         try {
             setSubmitting(true);
             const payload = {
                 ...data,
-                validFrom: data.validFrom || undefined,
-                validTo: data.validTo || undefined,
+                validFrom: toApiDate(data.validFrom ?? undefined),
+                validTo: toApiDate(data.validTo ?? undefined),
             };
             await updateNetworkPoint(id, payload);
             toast({

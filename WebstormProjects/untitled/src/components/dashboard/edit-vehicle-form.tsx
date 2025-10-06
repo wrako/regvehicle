@@ -11,18 +11,22 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { FileText } from "lucide-react";
+import { FileText, CalendarIcon } from "lucide-react";
 import { API_BASE } from "@/constants/api";
 import { fileNameFromPath } from "@/utils/stringHelpers";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { formatDate, toApiDate } from "@/lib/date";
 
 export interface EditInitial {
     licensePlate: string;
     brand: string;
     model: string;
     vinNum: string;
-    firstRegistrationDate?: string;
-    lastTechnicalCheckDate?: string;
-    technicalCheckValidUntil?: string;
+    firstRegistrationDate: Date | null;
+    lastTechnicalCheckDate: Date | null;
+    technicalCheckValidUntil: Date | null;
     status:
         | "aktívne"
         | "rezerva"
@@ -70,7 +74,13 @@ export function EditVehicleForm({
     const { toast } = useToast();
 
     const onSubmit = async (values: EditInitial) => {
-        const payload = { ...values, status: mapStatusToApi(values.status) };
+        const payload = {
+            ...values,
+            status: mapStatusToApi(values.status),
+            firstRegistrationDate: toApiDate(values.firstRegistrationDate ?? undefined),
+            lastTechnicalCheckDate: toApiDate(values.lastTechnicalCheckDate ?? undefined),
+            technicalCheckValidUntil: toApiDate(values.technicalCheckValidUntil ?? undefined),
+        };
         try {
             const res = await fetch(`${API_BASE}/vehicles/${vehicleId}/edit`, {
                 method: "POST",
@@ -92,6 +102,48 @@ export function EditVehicleForm({
             });
         }
     };
+
+    const renderDatePicker = (
+        name: keyof Pick<EditInitial, "firstRegistrationDate" | "lastTechnicalCheckDate" | "technicalCheckValidUntil">,
+        label: string,
+        required = false
+    ) => (
+        <Controller
+            control={control}
+            name={name}
+            render={({ field }) => (
+                <div>
+                    <label className="block text-sm font-medium mb-1">
+                        {label}
+                        {required ? " *" : ""}
+                    </label>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className={cn(
+                                    "w-full justify-start text-left font-normal",
+                                    !field.value && "text-muted-foreground"
+                                )}
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {field.value ? formatDate(field.value) : <span>Vyberte dátum</span>}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                                mode="single"
+                                selected={field.value ?? undefined}
+                                onSelect={(d) => field.onChange(d ?? null)}
+                                initialFocus
+                            />
+                        </PopoverContent>
+                    </Popover>
+                </div>
+            )}
+        />
+    );
 
     return (
         <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-2 gap-4">
@@ -115,22 +167,11 @@ export function EditVehicleForm({
                 <Input {...register("vinNum")} />
             </div>
 
-            <div>
-                <label className="block text-sm font-medium mb-1">Prvá registrácia</label>
-                <Input type="date" {...register("firstRegistrationDate")} />
-            </div>
+            {renderDatePicker("firstRegistrationDate", "Prvá registrácia")}
 
-            <div>
-                <label className="block text-sm font-medium mb-1">
-                    Posledná technická kontrola
-                </label>
-                <Input type="date" {...register("lastTechnicalCheckDate")} />
-            </div>
+            {renderDatePicker("lastTechnicalCheckDate", "Posledná technická kontrola")}
 
-            <div>
-                <label className="block text-sm font-medium mb-1">Platnosť STK *</label>
-                <Input type="date" {...register("technicalCheckValidUntil")} />
-            </div>
+            {renderDatePicker("technicalCheckValidUntil", "Platnosť STK", true)}
 
             <div>
                 <label className="block text-sm font-medium mb-1">Status *</label>
@@ -138,7 +179,7 @@ export function EditVehicleForm({
                     control={control}
                     name="status"
                     render={({ field }) => (
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                             <SelectTrigger>
                                 <SelectValue placeholder="Vyber status" />
                             </SelectTrigger>
@@ -206,7 +247,7 @@ export function EditVehicleForm({
                     control={control}
                     name="providerId"
                     render={({ field }) => (
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                             <SelectTrigger>
                                 <SelectValue placeholder="Vyber poskytovateľa" />
                             </SelectTrigger>

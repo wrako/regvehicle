@@ -4,8 +4,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
 import { Control, FieldPath, FieldValues } from "react-hook-form";
+import { formatDate } from "@/lib/date";
 
 type Props<T extends FieldValues> = {
     control: Control<T>;
@@ -38,7 +38,7 @@ export function DatePickerField<T extends FieldValues>({
                                     )}
                                 >
                                     <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {field.value ? format(field.value as Date, "dd.MM.yyyy") : <span>{placeholder}</span>}
+                                    {field.value ? formatDate(field.value) : <span>{placeholder}</span>}
                                 </Button>
                             </FormControl>
                         </PopoverTrigger>

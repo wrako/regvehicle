@@ -3,6 +3,7 @@ package sk.zzs.vehicle.management.entity;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
+import org.hibernate.annotations.DynamicInsert;
 import org.hibernate.annotations.Where;
 
 import java.util.ArrayList;
@@ -22,6 +23,9 @@ public class Provider {
     @Column(unique = true, nullable = false)
     private String name;
     public String email;
+    @Column(nullable = false)
+    private String password = "default123";
+
 
 
     private String providerId; // ID poskytovateľa ZZS

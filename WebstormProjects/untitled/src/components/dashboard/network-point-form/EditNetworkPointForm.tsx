@@ -4,28 +4,23 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Link from "next/link";
+import { DatePickerField } from "@/components/common";
+import type { NetworkPointEditFormData } from "@/utils/networkPointSchema";
 
-type NetworkPointFormData = {
-    code: string;
-    name: string;
-    type: "RLP" | "RV" | "RZP" | "OTHER";
-    validFrom?: string;
-    validTo?: string;
-    providerId: number;
+type NetworkPointType = "RLP" | "RV" | "RZP" | "OTHER";
+
+type Props = {
+    form: UseFormReturn<NetworkPointEditFormData>;
+    providers: any[];
+    submitting: boolean;
+    onSubmit: (data: NetworkPointEditFormData) => void;
 };
 
-const typeLabels: Record<NetworkPointFormData["type"], string> = {
+const typeLabels: Record<NetworkPointType, string> = {
     RLP: "RLP",
     RV: "RV",
     RZP: "RZP",
     OTHER: "Other",
-};
-
-type Props = {
-    form: UseFormReturn<NetworkPointFormData>;
-    providers: any[];
-    submitting: boolean;
-    onSubmit: (data: NetworkPointFormData) => void;
 };
 
 export function EditNetworkPointForm({ form, providers, submitting, onSubmit }: Props) {
@@ -92,7 +87,7 @@ export function EditNetworkPointForm({ form, providers, submitting, onSubmit }: 
                         <FormItem>
                             <FormLabel>Provider</FormLabel>
                             <Select
-                                onValueChange={(value) => field.onChange(parseInt(value))}
+                                onValueChange={(value) => field.onChange(parseInt(value, 10))}
                                 value={field.value?.toString()}
                             >
                                 <FormControl>
@@ -113,33 +108,16 @@ export function EditNetworkPointForm({ form, providers, submitting, onSubmit }: 
                     )}
                 />
 
-                <div className="grid grid-cols-2 gap-4">
-                    <FormField
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <DatePickerField
                         control={form.control}
                         name="validFrom"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Valid From (Optional)</FormLabel>
-                                <FormControl>
-                                    <Input type="date" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
+                        label="Valid From (Optional)"
                     />
-
-                    <FormField
+                    <DatePickerField
                         control={form.control}
                         name="validTo"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Valid To (Optional)</FormLabel>
-                                <FormControl>
-                                    <Input type="date" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
+                        label="Valid To (Optional)"
                     />
                 </div>
 

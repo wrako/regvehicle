@@ -1,6 +1,6 @@
-import { format } from "date-fns";
 import { createVehicle, editVehicle } from "@/lib/api";
 import { vinExists, uploadVehicleFiles } from "@/utils";
+import { toApiDate } from "@/lib/date";
 
 type FormValues = {
     licensePlate: string;
@@ -30,9 +30,9 @@ export function buildVehiclePayload(v: FormValues, edit: boolean, vehicleId?: st
         vinNum: (v.vinNum || "").toUpperCase().trim(),
         brand: v.brand,
         model: v.model,
-        firstRegistrationDate: v.firstRegistrationDate ? format(v.firstRegistrationDate, "yyyy-MM-dd") : null,
-        lastTechnicalCheckDate: v.lastTechnicalCheckDate ? format(v.lastTechnicalCheckDate, "yyyy-MM-dd") : null,
-        technicalCheckValidUntil: format(v.technicalCheckValidUntil, "yyyy-MM-dd"),
+        firstRegistrationDate: toApiDate(v.firstRegistrationDate) ?? null,
+        lastTechnicalCheckDate: toApiDate(v.lastTechnicalCheckDate) ?? null,
+        technicalCheckValidUntil: toApiDate(v.technicalCheckValidUntil) ?? "",
         status: statusMap[v.status],
         providerId: v.providerId,
     };

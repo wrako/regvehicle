@@ -1,21 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { format } from "date-fns";
-import { sk } from "date-fns/locale";
+import { formatDate } from "@/lib/date";
 
 type Props = {
     firstRegistrationDate?: string;
     lastTechnicalCheckDate?: string;
     technicalCheckValidUntil?: string;
 };
-
-function formatDate(dateStr?: string) {
-    if (!dateStr) return "N/A";
-    try {
-        return format(new Date(dateStr), "dd.MM.yyyy", { locale: sk });
-    } catch {
-        return "N/A";
-    }
-}
 
 const DetailItem = ({ label, value }: { label: string; value: string }) => (
     <div>
@@ -37,15 +27,15 @@ export function VehicleTechnicalInfo({
             <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <DetailItem
                     label="Dátum prvej registrácie"
-                    value={formatDate(firstRegistrationDate)}
+                    value={formatDate(firstRegistrationDate) || "N/A"}
                 />
                 <DetailItem
                     label="Dátum poslednej technickej kontroly"
-                    value={formatDate(lastTechnicalCheckDate)}
+                    value={formatDate(lastTechnicalCheckDate) || "N/A"}
                 />
                 <DetailItem
                     label="Technická kontrola platná do"
-                    value={formatDate(technicalCheckValidUntil)}
+                    value={formatDate(technicalCheckValidUntil) || "N/A"}
                 />
             </CardContent>
         </Card>

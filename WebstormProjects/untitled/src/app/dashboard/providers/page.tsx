@@ -3,13 +3,14 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, MoreHorizontal, Building, Trash2, Edit, Archive } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Building, Trash2, Edit, Archive, CheckCircle } from "lucide-react";
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { API_BASE } from "@/constants/api";
 import { cancellableFetch } from "@/utils/fetchUtils";
+import { runProviderEmptyCheck } from "@/lib/api";
 
 type Provider = {
     id: number;
@@ -28,6 +29,7 @@ export default function ProvidersPage() {
     const { toast } = useToast();
     const [items, setItems] = useState<ProviderRow[]>([]);
     const [loading, setLoading] = useState(false);
+    const [checkingEmpty, setCheckingEmpty] = useState(false);
     const loadedRef = useRef(false);
     const lastQueryKeyRef = useRef<string>("");
 
@@ -151,6 +153,38 @@ export default function ProvidersPage() {
         }
     }
 
+    async function handleCheckEmpty() {
+        setCheckingEmpty(true);
+        try {
+            const result = await runProviderEmptyCheck();
+            const { checked, archived, skippedArchived, errors } = result;
+
+            let description = `Checked ${checked} provider(s), archived ${archived}`;
+            if (skippedArchived > 0) {
+                description += `, skipped ${skippedArchived} already archived`;
+            }
+
+            toast({
+                title: "Provider empty check completed",
+                description,
+                variant: errors && errors.length > 0 ? "destructive" : "default",
+            });
+
+            // Reset ref to allow reload
+            lastQueryKeyRef.current = "";
+            await load();
+        } catch (e: any) {
+            console.error("Empty check error:", e);
+            toast({
+                title: "Error checking providers",
+                description: e?.message ?? "Please try again.",
+                variant: "destructive",
+            });
+        } finally {
+            setCheckingEmpty(false);
+        }
+    }
+
     return (
         <div className="flex flex-col gap-6">
             <div className="flex items-center justify-between">
@@ -164,6 +198,14 @@ export default function ProvidersPage() {
                     </div>
                 </div>
                 <div className="flex gap-2">
+                    <Button
+                        variant="outline"
+                        onClick={handleCheckEmpty}
+                        disabled={checkingEmpty}
+                    >
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                        {checkingEmpty ? "Checking..." : "Check providers without network points"}
+                    </Button>
                     <Button variant="outline" asChild>
                         <Link href="/dashboard/providers/archived">
                             <Archive className="mr-2 h-4 w-4" />
