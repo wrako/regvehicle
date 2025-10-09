@@ -2,9 +2,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate } from "@/lib/date";
 
 type Props = {
-    firstRegistrationDate?: string;
-    lastTechnicalCheckDate?: string;
-    technicalCheckValidUntil?: string;
+    firstRegistrationDate?: Date | null;
+    lastTechnicalCheckDate?: Date | null;
+    technicalCheckValidUntil?: Date | null;
 };
 
 const DetailItem = ({ label, value }: { label: string; value: string }) => (

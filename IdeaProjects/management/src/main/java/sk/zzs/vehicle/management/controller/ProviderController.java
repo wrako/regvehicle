@@ -66,7 +66,7 @@ public class ProviderController {
     }
 
     @PostMapping("/{id}/unarchive")
-    public ProviderDto unarchive(@PathVariable Long id) {
+    public boolean unarchive(@PathVariable Long id) {
         return providerService.unarchiveProvider(id);
     }
 
@@ -78,15 +78,6 @@ public class ProviderController {
     @GetMapping("/archived/{id}")
     public ProviderDto getArchivedProvider(@PathVariable Long id) {
         return providerService.getArchivedById(id);
-    }
-
-    /**
-     * Manual trigger: find and archive all active providers with zero active network points.
-     * Returns summary JSON: { checked, archived, skippedArchived, errors? }
-     */
-    @PostMapping("/empty-check")
-    public Map<String, Object> checkProvidersWithoutNetworkPoints() {
-        return providerService.checkAndArchiveProvidersWithoutNetworkPoints();
     }
 
 }

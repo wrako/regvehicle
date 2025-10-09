@@ -12,7 +12,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.server.ResponseStatusException;
 import sk.zzs.vehicle.management.dto.ProviderDto;
 import sk.zzs.vehicle.management.dto.ProviderMapper;
+import sk.zzs.vehicle.management.entity.NetworkPoint;
 import sk.zzs.vehicle.management.entity.Provider;
+import sk.zzs.vehicle.management.entity.Vehicle;
 import sk.zzs.vehicle.management.repository.ProviderRepository;
 import sk.zzs.vehicle.management.repository.VehicleRepository;
 import sk.zzs.vehicle.management.repository.NetworkPointRepository;
@@ -113,10 +115,9 @@ public class ProviderService {
         Provider existing = providerRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Provider not found: " + id));
 
-        // 1. Archive all vehicles assigned to this provider
-        List<sk.zzs.vehicle.management.entity.Vehicle> vehicles =
+        List<Vehicle> vehicles =
             existing.getVehicles();
-        for (sk.zzs.vehicle.management.entity.Vehicle vehicle : vehicles) {
+        for (Vehicle vehicle : vehicles) {
             if (!vehicle.isArchived()) {
                 vehicleService.archiveVehicle(
                     vehicle.getId(),
@@ -126,38 +127,23 @@ public class ProviderService {
             }
         }
 
-        // 2. Unassign all network points from this provider
-        List<sk.zzs.vehicle.management.entity.NetworkPoint> networkPoints =
+        List<NetworkPoint> networkPoints =
             existing.getNetworkPoints();
-        for (sk.zzs.vehicle.management.entity.NetworkPoint np : networkPoints) {
+        for (NetworkPoint np : networkPoints) {
             if (!np.isArchived()) {
                 np.setProvider(null);
             }
         }
-
-        // 3. Archive the provider
-        // Because of @Where, the managed entity may still read archived=false until cleared/refresh.
-        // Return a DTO based on known state:
         existing.setArchived(true);
         return providerMapper.toDto(existing);
     }
 
-    public ProviderDto unarchiveProvider(Long id) {
-        Provider archivedRef = providerRepository.findArchivedById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Archived provider not found: " + id));
-
-        // Check if provider has active vehicles or network points that would violate constraints
-        long vehicleCount = vehicleRepository.countByProviderId(id);
-        long networkPointCount = networkPointRepository.countByProviderId(id);
-
+    public boolean unarchiveProvider(Long id) {
         int updated = providerRepository.unarchiveById(id);
         if (updated == 0) throw new ResponseStatusException(NOT_FOUND, "Provider not found: " + id);
 
-        // Reload (optional) if you need full data; @Where will show it now since archived=false.
-        Provider p = providerRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Provider not found after unarchive: " + id));
 
-        return providerMapper.toDto(p);
+        return true;
     }
 
     public Page<ProviderDto> getArchived(Pageable pageable) {
@@ -171,43 +157,5 @@ public class ProviderService {
                         new ResponseStatusException(HttpStatus.NOT_FOUND, "Archived provider not found: " + id));
     }
 
-    /**
-     * Find all active providers with zero active network points and archive them.
-     * Returns summary: { checked, archived, skippedArchived, errors }
-     */
-    public Map<String, Object> checkAndArchiveProvidersWithoutNetworkPoints() {
-        List<Provider> candidates = providerRepository.findActiveProvidersWithoutNetworkPoints();
-
-        int checked = candidates.size();
-        int archived = 0;
-        int skippedArchived = 0;
-        List<String> errors = new ArrayList<>();
-
-        for (Provider provider : candidates) {
-            try {
-                // Double-check not already archived (paranoid check)
-                if (provider.isArchived()) {
-                    skippedArchived++;
-                    continue;
-                }
-
-                // Archive with reason
-                archiveProvider(provider.getId(), "No network points");
-                archived++;
-            } catch (Exception e) {
-                errors.add("Provider ID " + provider.getId() + ": " + e.getMessage());
-            }
-        }
-
-        Map<String, Object> summary = new HashMap<>();
-        summary.put("checked", checked);
-        summary.put("archived", archived);
-        summary.put("skippedArchived", skippedArchived);
-        if (!errors.isEmpty()) {
-            summary.put("errors", errors);
-        }
-
-        return summary;
-    }
 
 }

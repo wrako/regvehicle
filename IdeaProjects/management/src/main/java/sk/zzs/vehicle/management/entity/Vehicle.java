@@ -57,6 +57,10 @@ public class Vehicle {
     @JoinColumn(name = "provider_id")
     private Provider provider;
 
+    // Provider assignment dates
+    private LocalDate providerAssignmentStartDate;
+    private LocalDate providerAssignmentEndDate;
+
 //    @ManyToOne(fetch = FetchType.LAZY)      // no cascade here
 //    @JoinColumn(name = "avl_id")
 //    private AvlDevice avlDevice;

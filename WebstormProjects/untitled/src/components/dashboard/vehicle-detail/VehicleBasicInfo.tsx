@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { formatDate } from "@/lib/date";
 
 type Props = {
     licensePlate: string;
@@ -7,6 +8,8 @@ type Props = {
     model: string;
     vinNum?: string;
     providerName?: string;
+    providerAssignmentStartDate?: Date | null;
+    providerAssignmentEndDate?: Date | null;
     status: string;
 };
 
@@ -45,6 +48,8 @@ export function VehicleBasicInfo({
     model,
     vinNum,
     providerName,
+    providerAssignmentStartDate,
+    providerAssignmentEndDate,
     status,
 }: Props) {
     return (
@@ -65,6 +70,14 @@ export function VehicleBasicInfo({
                             {statusLabels[status] || status}
                         </Badge>
                     }
+                />
+                <DetailItem
+                    label="Začiatok pridelenia"
+                    value={providerAssignmentStartDate ? formatDate(providerAssignmentStartDate) : "-"}
+                />
+                <DetailItem
+                    label="Koniec pridelenia"
+                    value={providerAssignmentEndDate ? formatDate(providerAssignmentEndDate) : "-"}
                 />
             </CardContent>
         </Card>

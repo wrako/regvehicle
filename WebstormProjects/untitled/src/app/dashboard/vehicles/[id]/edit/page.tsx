@@ -34,6 +34,8 @@ function normaliseToInitial(api: any): EditInitial {
         technicalCheckValidUntil: fromApiDate(api.technicalCheckValidUntil ?? api.expiryDateSTK) ?? null,
         status: mapStatusToUi(api.status),
         providerId: String(api.providerId ?? api.provider?.id ?? ""),
+        providerAssignmentStartDate: fromApiDate(api.providerAssignmentStartDate) ?? null,
+        providerAssignmentEndDate: fromApiDate(api.providerAssignmentEndDate) ?? null,
         avlDeviceId: String(api.avlDeviceId ?? api.avlDevice?.id ?? ""),
         rdstDeviceId: String(api.rdstDeviceId ?? api.rdstDevice?.id ?? ""),
         // removed certificate field (view-only now)

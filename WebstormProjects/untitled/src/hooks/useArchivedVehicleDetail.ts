@@ -1,15 +1,16 @@
 import { useEffect, useState, useRef } from "react";
 import { API_BASE } from "@/constants/api";
 import { cancellableFetch } from "@/utils/fetchUtils";
+import { fromApiDate } from "@/lib/date";
 
 interface VehicleDto {
     id: number;
     licensePlate: string;
     brand: string;
     model: string;
-    firstRegistrationDate?: string;
-    lastTechnicalCheckDate?: string;
-    technicalCheckValidUntil?: string;
+    firstRegistrationDate?: Date | null;
+    lastTechnicalCheckDate?: Date | null;
+    technicalCheckValidUntil?: Date | null;
     status: string;
     providerId?: number;
     networkPointId?: number;
@@ -20,6 +21,8 @@ interface VehicleDto {
     vinNum?: string;
     providerName?: string;
     networkPointName?: string;
+    providerAssignmentStartDate?: Date | null;
+    providerAssignmentEndDate?: Date | null;
 }
 
 interface Provider {
@@ -56,11 +59,22 @@ export function useArchivedVehicleDetail(id: string) {
         (async () => {
             try {
                 setLoading(true);
-                const dto: VehicleDto = await cancellableFetch(
+                const rawDto = await cancellableFetch(
                     `${API_BASE}/vehicles/archived/${id}`,
                     {},
                     `archived-vehicle-detail-${id}`
                 );
+
+                // Convert date strings to Date objects
+                const dto: VehicleDto = {
+                    ...rawDto,
+                    firstRegistrationDate: fromApiDate(rawDto.firstRegistrationDate),
+                    lastTechnicalCheckDate: fromApiDate(rawDto.lastTechnicalCheckDate),
+                    technicalCheckValidUntil: fromApiDate(rawDto.technicalCheckValidUntil),
+                    providerAssignmentStartDate: fromApiDate(rawDto.providerAssignmentStartDate),
+                    providerAssignmentEndDate: fromApiDate(rawDto.providerAssignmentEndDate),
+                };
+
                 setVehicle(dto);
 
                 // Fetch related entities in parallel

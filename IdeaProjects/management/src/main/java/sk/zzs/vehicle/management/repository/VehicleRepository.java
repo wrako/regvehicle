@@ -11,6 +11,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 
@@ -55,5 +57,12 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long> , JpaSpe
 
     @Query("SELECT COUNT(v) FROM Vehicle v WHERE v.provider.id = :providerId")
     long countByProviderId(@Param("providerId") Long providerId);
+
+    /**
+     * Find all active (non-archived) vehicles whose provider assignment has expired.
+     * Due to @Where(clause = "archived = false") on Vehicle entity, this will only return active vehicles.
+     */
+    @Query("SELECT v FROM Vehicle v WHERE v.providerAssignmentEndDate < :date AND v.provider IS NOT NULL")
+    List<Vehicle> findExpiredAssignments(@Param("date") LocalDate date);
 
 }

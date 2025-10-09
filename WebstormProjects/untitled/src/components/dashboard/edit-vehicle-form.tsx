@@ -34,6 +34,8 @@ export interface EditInitial {
         | "dočasne vyradené"
         | "preregistrované";
     providerId: string;
+    providerAssignmentStartDate: Date | null;
+    providerAssignmentEndDate: Date | null;
     avlDeviceId: string;
     rdstDeviceId: string;
     filePaths?: string[];
@@ -80,6 +82,8 @@ export function EditVehicleForm({
             firstRegistrationDate: toApiDate(values.firstRegistrationDate ?? undefined),
             lastTechnicalCheckDate: toApiDate(values.lastTechnicalCheckDate ?? undefined),
             technicalCheckValidUntil: toApiDate(values.technicalCheckValidUntil ?? undefined),
+            providerAssignmentStartDate: toApiDate(values.providerAssignmentStartDate ?? undefined),
+            providerAssignmentEndDate: toApiDate(values.providerAssignmentEndDate ?? undefined),
         };
         try {
             const res = await fetch(`${API_BASE}/vehicles/${vehicleId}/edit`, {
@@ -104,9 +108,10 @@ export function EditVehicleForm({
     };
 
     const renderDatePicker = (
-        name: keyof Pick<EditInitial, "firstRegistrationDate" | "lastTechnicalCheckDate" | "technicalCheckValidUntil">,
+        name: keyof Pick<EditInitial, "firstRegistrationDate" | "lastTechnicalCheckDate" | "technicalCheckValidUntil" | "providerAssignmentStartDate" | "providerAssignmentEndDate">,
         label: string,
-        required = false
+        required = false,
+        disabled = false
     ) => (
         <Controller
             control={control}
@@ -122,6 +127,7 @@ export function EditVehicleForm({
                             <Button
                                 type="button"
                                 variant="outline"
+                                disabled={disabled}
                                 className={cn(
                                     "w-full justify-start text-left font-normal",
                                     !field.value && "text-muted-foreground"
@@ -136,6 +142,7 @@ export function EditVehicleForm({
                                 mode="single"
                                 selected={field.value ?? undefined}
                                 onSelect={(d) => field.onChange(d ?? null)}
+                                disabled={disabled}
                                 initialFocus
                             />
                         </PopoverContent>
@@ -262,6 +269,10 @@ export function EditVehicleForm({
                     )}
                 />
             </div>
+
+            {renderDatePicker("providerAssignmentStartDate", "Dátum začiatku pridelenia", false, false)}
+
+            {renderDatePicker("providerAssignmentEndDate", "Dátum ukončenia pridelenia", true)}
 
 
             {/* Files (read-only like the detail page) */}

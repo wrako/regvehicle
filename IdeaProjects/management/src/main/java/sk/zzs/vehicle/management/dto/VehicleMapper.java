@@ -58,6 +58,8 @@ public class VehicleMapper {
                 .status(v.getStatus())
                 .providerId(providerId)
                 .providerName(providerName)
+                .providerAssignmentStartDate(v.getProviderAssignmentStartDate())
+                .providerAssignmentEndDate(v.getProviderAssignmentEndDate())
 //                .avlDeviceId(v.getAvlDevice() != null ? v.getAvlDevice().getId() : null)
 //                .rdstDeviceId(v.getRdstDevice() != null ? v.getRdstDevice().getId() : null)
 
@@ -83,6 +85,8 @@ public class VehicleMapper {
         v.setProvider(d.getProviderId() != null
                 ? providerService.findById(d.getProviderId())
                 : null);
+        v.setProviderAssignmentStartDate(d.getProviderAssignmentStartDate());
+        v.setProviderAssignmentEndDate(d.getProviderAssignmentEndDate());
 
         System.out.println("==========================================");
         System.out.println(d.getProviderId());
@@ -116,6 +120,8 @@ public class VehicleMapper {
         v.setFilePaths(d.getFilePaths());
 
         v.setProvider    (d.getProviderId()     != null ? em.getReference(Provider.class,     d.getProviderId())     : null);
+        v.setProviderAssignmentStartDate(d.getProviderAssignmentStartDate());
+        v.setProviderAssignmentEndDate(d.getProviderAssignmentEndDate());
 //        v.setAvlDevice   (d.getAvlDeviceId()    != null ? em.getReference(AvlDevice.class,    d.getAvlDeviceId())    : null);
 //        v.setRdstDevice  (d.getRdstDeviceId()   != null ? em.getReference(RdstDevice.class,   d.getRdstDeviceId())   : null);
     }

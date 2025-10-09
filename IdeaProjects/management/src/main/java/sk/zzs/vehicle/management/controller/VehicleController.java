@@ -26,6 +26,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/vehicles")
@@ -117,9 +118,12 @@ public class VehicleController {
     }
 
     @PostMapping("/{id}/unarchive")
-    public VehicleDto unarchive(@PathVariable Long id,
-    @RequestParam(value = "status", required = false) VehicleStatus status) {
-        return vehicleService.unarchiveVehicle(id, status);
+    public VehicleDto unarchive(
+            @PathVariable Long id,
+            @RequestParam(value = "status", required = false) VehicleStatus status,
+            @RequestParam(value = "providerId") Long providerId,
+            @RequestParam(value = "providerAssignmentEndDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        return vehicleService.unarchiveVehicle(id, status, providerId, endDate);
     }
 
     @GetMapping("/archived/page")
@@ -130,6 +134,11 @@ public class VehicleController {
     @GetMapping("/archived/{id}")
     public VehicleDto getArchivedVehicle(@PathVariable Long id) {
         return vehicleService.getArchivedById(id);
+    }
+
+    @PostMapping("/check-expired")
+    public Map<String, Object> checkExpired() {
+        return vehicleService.checkAndArchiveExpiredVehicles();
     }
 
 }

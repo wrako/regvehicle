@@ -12,6 +12,7 @@ type FormValues = {
     technicalCheckValidUntil: Date;
     status: "aktívne" | "rezerva" | "vyradené" | "dočasne vyradené" | "preregistrované";
     providerId: string;
+    providerAssignmentEndDate: Date;
     files?: any;
 };
 
@@ -35,6 +36,7 @@ export function buildVehiclePayload(v: FormValues, edit: boolean, vehicleId?: st
         technicalCheckValidUntil: toApiDate(v.technicalCheckValidUntil) ?? "",
         status: statusMap[v.status],
         providerId: v.providerId,
+        providerAssignmentEndDate: toApiDate(v.providerAssignmentEndDate) ?? "",
     };
 }
 

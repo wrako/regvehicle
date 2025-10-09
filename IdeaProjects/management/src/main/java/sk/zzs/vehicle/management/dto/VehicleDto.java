@@ -30,6 +30,10 @@ public class VehicleDto {
     private Long providerId;
     private String providerName;
 
+    // Provider assignment dates
+    private LocalDate providerAssignmentStartDate;
+    private LocalDate providerAssignmentEndDate;
+
     private List<String> filePaths;
 
 //    private String archivedBy;

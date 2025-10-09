@@ -13,6 +13,12 @@ export const vehicleFormSchema = z.object({
     technicalCheckValidUntil: z.date({ required_error: "Platnosť STK je povinná" }),
     status: z.enum(["aktívne", "rezerva", "vyradené", "dočasne vyradené", "preregistrované"]),
     providerId: z.string().min(1, "Vyberte poskytovateľa"),
+    providerAssignmentEndDate: z.date({ required_error: "Dátum ukončenia pridelenia poskytovateľa je povinný" })
+        .refine((date) => {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            return date > today;
+        }, "Dátum ukončenia musí byť v budúcnosti (nie dnes)"),
     files: z.any().optional(),
 });
 
@@ -28,5 +34,6 @@ export const defaultVehicleFormValues: VehicleFormValues = {
     technicalCheckValidUntil: undefined as any,
     status: "aktívne",
     providerId: "",
+    providerAssignmentEndDate: undefined as any,
     files: undefined,
 };

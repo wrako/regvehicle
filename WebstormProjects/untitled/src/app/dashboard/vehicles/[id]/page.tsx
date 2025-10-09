@@ -28,6 +28,8 @@ export default function VehicleDetailPage() {
                 model={vehicle.model}
                 vinNum={vehicle.vinNum}
                 providerName={vehicle.providerName}
+                providerAssignmentStartDate={vehicle.providerAssignmentStartDate}
+                providerAssignmentEndDate={vehicle.providerAssignmentEndDate}
                 status={vehicle.status}
             />
 
