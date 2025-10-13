@@ -65,4 +65,36 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long> , JpaSpe
     @Query("SELECT v FROM Vehicle v WHERE v.providerAssignmentEndDate < :date AND v.provider IS NOT NULL")
     List<Vehicle> findExpiredAssignments(@Param("date") LocalDate date);
 
+    /**
+     * Check if VIN exists in ANY vehicle (active or archived).
+     * Uses native query to bypass @Where clause.
+     * Returns count (0 if not exists, >0 if exists).
+     */
+    @Query(value = "SELECT COUNT(*) FROM vehicle WHERE vin_num = :vinNum", nativeQuery = true)
+    int countByVinNumIncludingArchived(@Param("vinNum") String vinNum);
+
+    /**
+     * Check if VIN exists in any vehicle except the one with given ID (for edit operations).
+     * Uses native query to bypass @Where clause.
+     * Returns count (0 if not exists, >0 if exists).
+     */
+    @Query(value = "SELECT COUNT(*) FROM vehicle WHERE vin_num = :vinNum AND id != :excludeId", nativeQuery = true)
+    int countByVinNumExcludingId(@Param("vinNum") String vinNum, @Param("excludeId") Long excludeId);
+
+    /**
+     * Check if license plate exists in ANY vehicle (active or archived).
+     * Uses native query to bypass @Where clause.
+     * Returns count (0 if not exists, >0 if exists).
+     */
+    @Query(value = "SELECT COUNT(*) FROM vehicle WHERE license_plate = :licensePlate", nativeQuery = true)
+    int countByLicensePlateIncludingArchived(@Param("licensePlate") String licensePlate);
+
+    /**
+     * Check if license plate exists in any vehicle except the one with given ID (for edit operations).
+     * Uses native query to bypass @Where clause.
+     * Returns count (0 if not exists, >0 if exists).
+     */
+    @Query(value = "SELECT COUNT(*) FROM vehicle WHERE license_plate = :licensePlate AND id != :excludeId", nativeQuery = true)
+    int countByLicensePlateExcludingId(@Param("licensePlate") String licensePlate, @Param("excludeId") Long excludeId);
+
 }

@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import sk.zzs.vehicle.management.dto.VehicleDto;
 import sk.zzs.vehicle.management.dto.VehicleFilter;
-import sk.zzs.vehicle.management.enumer.VehicleStatus;
 import sk.zzs.vehicle.management.service.VehicleService;
 
 import java.io.IOException;
@@ -39,14 +38,13 @@ public class VehicleController {
     @GetMapping
     public Page<VehicleDto> getVehicles(
             @RequestParam(required = false) String q,
-            @RequestParam(required = false) String status,
             @RequestParam(required = false) String provider,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate stkValidFrom,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate stkValidTo,
             @PageableDefault(size = 20, sort = "id") Pageable pageable
     ) {
 
-        VehicleFilter filter = new VehicleFilter(q, status, provider, stkValidFrom, stkValidTo);
+        VehicleFilter filter = new VehicleFilter(q, provider, stkValidFrom, stkValidTo);
         return vehicleService.search(filter, pageable);
     }
 
@@ -108,22 +106,16 @@ public class VehicleController {
 
     @PostMapping("/{id}/archive")
     public VehicleDto archive(@PathVariable Long id,
-                              @RequestParam(value = "reason", required = false) String reason,
-                              @RequestParam(value = "status", required = false) VehicleStatus status) {
-//        System.out.println("==================================");
-//        System.out.println(status);
-//        System.out.println("==================================");
-
-        return vehicleService.archiveVehicle(id, reason, status);
+                              @RequestParam(value = "reason", required = false) String reason) {
+        return vehicleService.archiveVehicle(id, reason);
     }
 
     @PostMapping("/{id}/unarchive")
     public VehicleDto unarchive(
             @PathVariable Long id,
-            @RequestParam(value = "status", required = false) VehicleStatus status,
             @RequestParam(value = "providerId") Long providerId,
             @RequestParam(value = "providerAssignmentEndDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        return vehicleService.unarchiveVehicle(id, status, providerId, endDate);
+        return vehicleService.unarchiveVehicle(id, providerId, endDate);
     }
 
     @GetMapping("/archived/page")

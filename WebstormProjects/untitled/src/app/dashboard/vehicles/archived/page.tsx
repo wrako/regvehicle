@@ -9,19 +9,10 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import VehicleTable from "@/components/dashboard/archived-vehicle-table";
-import type { Vehicle, VehicleStatus } from "@/types";
+import type { Vehicle } from "@/types";
 import { API_BASE } from "@/constants/api";
 import { cancellableFetch } from "@/utils/fetchUtils";
 import { fromApiDate } from "@/lib/date";
-
-// === Status conversions ===
-const apiToUiStatus: Record<string, VehicleStatus> = {
-    ACTIVE: "aktívne",
-    RESERVE: "rezerva",
-    DEREGISTERED: "vyradené",
-    TEMP_DEREGISTERED: "dočasne vyradené",
-    PREREGISTROVANÉ: "preregistrované",
-};
 
 function toDateOrNull(s?: string | null) {
     return fromApiDate(s ?? undefined) ?? null;
@@ -40,7 +31,6 @@ function mapApiToUi(v: any): Vehicle {
         networkPoint: v.networkPointId ? String(v.networkPointId) : "",
         networkPointLabel: v.networkPointName || "—",
 
-        status: apiToUiStatus[v.status] || "aktívne",
         stkDate: toDateOrNull(v.technicalCheckValidUntil),
         firstRegistration: toDateOrNull(v.firstRegistrationDate),
 

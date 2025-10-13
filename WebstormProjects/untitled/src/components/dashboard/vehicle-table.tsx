@@ -21,7 +21,7 @@ import type { Vehicle } from "@/types";
 import { formatDate } from "@/lib/date";
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { StatusBadge, EmptyTableState } from "@/components/common";
+import { EmptyTableState } from "@/components/common";
 import { ArchiveDialog } from "./vehicle-table/ArchiveDialog";
 import { useVehicleActions } from "@/hooks/useVehicleActions";
 
@@ -53,9 +53,9 @@ export default function VehicleTable({ vehicles }: VehicleTableProps) {
         }
     };
 
-    const handleArchiveConfirm = async (status: string, reason: string) => {
+    const handleArchiveConfirm = async (reason: string) => {
         if (selectedVehicleId === null) return;
-        const success = await handleArchive(selectedVehicleId, status, reason);
+        const success = await handleArchive(selectedVehicleId, reason);
         if (success) {
             setLocalVehicles((prev) => prev.filter((v) => v.id !== selectedVehicleId.toString()));
             alert("Vozidlo bolo archivované");
@@ -72,7 +72,6 @@ export default function VehicleTable({ vehicles }: VehicleTableProps) {
                         <TableHead>Značka</TableHead>
                         <TableHead className="hidden md:table-cell">Model</TableHead>
                         <TableHead>Poskytovateľ</TableHead>
-                        <TableHead>Stav</TableHead>
                         <TableHead className="hidden lg:table-cell">Platnosť STK</TableHead>
                         <TableHead>
                             <span className="sr-only">Akcie</span>
@@ -89,9 +88,6 @@ export default function VehicleTable({ vehicles }: VehicleTableProps) {
                                     {vehicle.model}
                                 </TableCell>
                                 <TableCell>{vehicle.providerLabel}</TableCell>
-                                <TableCell>
-                                    <StatusBadge status={vehicle.status} />
-                                </TableCell>
                                 <TableCell className="hidden lg:table-cell">
                                     {formatDate(vehicle.stkDate) || "—"}
                                 </TableCell>
@@ -142,7 +138,7 @@ export default function VehicleTable({ vehicles }: VehicleTableProps) {
                             </TableRow>
                         ))
                     ) : (
-                        <EmptyTableState colSpan={7} message="Žiadne vozidlá sa nenašli." />
+                        <EmptyTableState colSpan={6} message="Žiadne vozidlá sa nenašli." />
                     )}
                 </TableBody>
             </Table>

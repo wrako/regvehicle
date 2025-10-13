@@ -1,4 +1,4 @@
-import type { Vehicle, Provider, VehicleStatus, RdstDevice, AvlDevice, NetworkPoint, NetworkPointType } from '@/types';
+import type { Vehicle, Provider, RdstDevice, AvlDevice, NetworkPoint, NetworkPointType } from '@/types';
 
 export const providers: Provider[] = [
     { id: '1', providerId: 'P001', name: 'ZZS Bratislava', address: 'Antolská 11, 851 07 Bratislava' },
@@ -34,7 +34,6 @@ export const networkPoints: NetworkPoint[] = Array.from({ length: 20 }, (_, i) =
 
 const vehicleMakes = ['Volkswagen', 'Mercedes-Benz', 'Ford', 'Škoda'];
 const vehicleModels = ['Transporter', 'Sprinter', 'Transit', 'Kodiaq'];
-const statuses: VehicleStatus[] = ['aktívne', 'rezerva', 'vyradené', 'dočasne vyradené', 'preregistrované'];
 const regions = ['BA', 'KE', 'PO', 'NR', 'ZA', 'TT', 'TN', 'BB'];
 
 // Simple pseudo-random number generator for deterministic results
@@ -58,7 +57,6 @@ export const vehicles: Vehicle[] = Array.from({ length: 50 }, (_, i) => {
     const make = vehicleMakes[Math.floor(pseudoRandom() * vehicleMakes.length)];
     const model = vehicleModels[Math.floor(pseudoRandom() * vehicleModels.length)];
     const provider = providers[Math.floor(pseudoRandom() * providers.length)].name;
-    const status = statuses[Math.floor(pseudoRandom() * statuses.length)];
     const stkDate = new Date(now.getFullYear() + Math.floor(pseudoRandom() * 3), now.getMonth(), now.getDate());
     const firstRegistration = new Date(now.getFullYear() - Math.floor(pseudoRandom() * 10), now.getMonth(), now.getDate());
 
@@ -71,7 +69,6 @@ export const vehicles: Vehicle[] = Array.from({ length: 50 }, (_, i) => {
         providerLabel: provider,
         networkPoint: networkPoints[Math.floor(pseudoRandom() * networkPoints.length)].id,
         networkPointLabel: networkPoints[Math.floor(pseudoRandom() * networkPoints.length)].name,
-        status,
         stkDate,
         firstRegistration,
         rdstModel: 'Motorola MTM',

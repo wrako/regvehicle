@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, History, MoreHorizontal } from "lucide-react";
+import { ArrowLeft, History, MoreHorizontal, ChevronDown, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import {
     Card,
@@ -33,6 +33,7 @@ import { API_BASE } from "@/constants/api";
 import { OperationBadge, type OperationType } from "@/components/common";
 import { cancellableFetch } from "@/utils/fetchUtils";
 import { formatDate } from "@/lib/date";
+import { VehicleLogBlockDto, VehicleLogDto } from "@/types";
 
 interface VehicleLog {
     id: number;
@@ -43,7 +44,6 @@ interface VehicleLog {
     firstRegistrationDate?: string;
     lastTechnicalCheckDate?: string;
     technicalCheckValidUntil?: string;
-    status: string;
     certificateFilePath?: string;
     author: string;
     timestamp: string;
@@ -62,41 +62,15 @@ function formatDateTime(value?: string | Date | null): string {
     return timePart ? `${datePart} ${timePart}` : datePart;
 }
 
-// Helper component for history status badge (differs from vehicle status)
-const HistoryStatusBadge = ({ status }: { status: string }) => {
-    const statusLabels: Record<string, string> = {
-        ACTIVE: "Aktívne",
-        RESERVE: "Rezerva",
-        DEREGISTERED: "Vyradené",
-        TEMP_DEREGISTERED: "Dočasne vyradené",
-        PREREGISTERED: "Preregistrované",
-    };
-
-    const variantMap: Record<
-        string,
-        "default" | "secondary" | "destructive" | "outline"
-    > = {
-        ACTIVE: "default",
-        RESERVE: "secondary",
-        DEREGISTERED: "destructive",
-        TEMP_DEREGISTERED: "outline",
-        PREREGISTERED: "secondary",
-    };
-
-    return (
-        <Badge variant={variantMap[status] ?? "outline"}>
-            {statusLabels[status] ?? status}
-        </Badge>
-    );
-};
 
 export default function VehicleHistoryPage() {
     const params = useParams();
     const id = typeof params.id === "string" ? params.id : "";
 
-    const [logs, setLogs] = useState<VehicleLog[]>([]);
+    const [blocks, setBlocks] = useState<VehicleLogBlockDto[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [expandedBlocks, setExpandedBlocks] = useState<Set<number>>(new Set());
     const lastIdRef = useRef<string>("");
 
     useEffect(() => {
@@ -110,11 +84,11 @@ export default function VehicleHistoryPage() {
 
         (async () => {
             try {
-                const res = await fetch(`${API_BASE}/vehicle-logs/history/${id}`);
+                const res = await fetch(`${API_BASE}/vehicle-logs/history/${id}/grouped`);
 
                 if (res.status === 404) {
                     // ✅ treat as "no logs"
-                    setLogs([]);
+                    setBlocks([]);
                     setLoading(false);
                     return;
                 }
@@ -124,7 +98,9 @@ export default function VehicleHistoryPage() {
                 }
 
                 const data = await res.json();
-                setLogs(data);
+                setBlocks(data);
+                // Expand all blocks by default
+                setExpandedBlocks(new Set(data.map((_: any, idx: number) => idx)));
             } catch (e: any) {
                 console.error(e);
                 setError("Nepodarilo sa načítať históriu vozidla.");
@@ -133,6 +109,18 @@ export default function VehicleHistoryPage() {
             }
         })();
     }, [id]);
+
+    const toggleBlock = (index: number) => {
+        setExpandedBlocks(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(index)) {
+                newSet.delete(index);
+            } else {
+                newSet.add(index);
+            }
+            return newSet;
+        });
+    };
 
     return (
         <div className="flex flex-col gap-6">
@@ -172,90 +160,111 @@ export default function VehicleHistoryPage() {
                         <p>Načítavam históriu...</p>
                     </CardContent>
                 </Card>
-            ) : (
+            ) : blocks.length === 0 ? (
                 <Card>
                     <CardHeader>
                         <CardTitle>Záznamy o zmenách</CardTitle>
                         <CardDescription>
-                            Detailné záznamy všetkých operácií, ktoré sa udiali na vozidle.
+                            Pre toto vozidlo neboli nájdené žiadne záznamy.
                         </CardDescription>
                     </CardHeader>
-                    <CardContent>
-                        <div className="rounded-md border">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Dátum a čas</TableHead>
-                                        <TableHead>Autor</TableHead>
-                                        <TableHead>Operácia</TableHead>
-                                        <TableHead>Stav</TableHead>
-                                        <TableHead>Platnosť STK</TableHead>
-                                        <TableHead className="hidden md:table-cell">
-                                            Značka &amp; Model
-                                        </TableHead>
-                                        <TableHead>
-                                            <span className="sr-only">Akcie</span>
-                                        </TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {logs.length > 0 ? (
-                                        logs.map((log) => (
-                                            <TableRow key={log.id}>
-                                                <TableCell className="font-medium">
-                                                    {formatDateTime(log.timestamp)}
-                                                </TableCell>
-                                                <TableCell>{log.author}</TableCell>
-                                                <TableCell>
-                                                    <OperationBadge operation={log.operation} />
-                                                </TableCell>
-                                                <TableCell>
-                                                    <HistoryStatusBadge status={log.status} />
-                                                </TableCell>
-                                                <TableCell>
-                                                    {formatDate(log.technicalCheckValidUntil)}
-                                                </TableCell>
-                                                <TableCell className="hidden md:table-cell">
-                                                    {log.brand} {log.model}
-                                                </TableCell>
-                                                <TableCell className="text-right">
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button
-                                                                aria-haspopup="true"
-                                                                size="icon"
-                                                                variant="ghost"
-                                                            >
-                                                                <MoreHorizontal className="h-4 w-4" />
-                                                                <span className="sr-only">Otvoriť menu</span>
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuLabel>Akcie</DropdownMenuLabel>
-                                                            <DropdownMenuItem asChild>
-                                                                <Link
-                                                                    href={`/dashboard/vehicles/${id}/history/${log.id}`}
-                                                                >
-                                                                    Viac informácií
-                                                                </Link>
-                                                            </DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
-                                    ) : (
-                                        <TableRow>
-                                            <TableCell colSpan={7} className="h-24 text-center">
-                                                Pre toto vozidlo neboli nájdené žiadne záznamy.
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    </CardContent>
                 </Card>
+            ) : (
+                <div className="flex flex-col gap-4">
+                    {blocks.map((block, blockIndex) => (
+                        <Card key={blockIndex}>
+                            <CardHeader
+                                className="cursor-pointer hover:bg-accent/50 transition-colors"
+                                onClick={() => toggleBlock(blockIndex)}
+                            >
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        {expandedBlocks.has(blockIndex) ? (
+                                            <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                                        ) : (
+                                            <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                                        )}
+                                        <div>
+                                            <CardTitle className="text-lg">
+                                                {block.providerName || "Neznámy poskytovateľ"}
+                                            </CardTitle>
+                                            <CardDescription>
+                                                {block.providerId ? `ID: ${block.providerId}` : "Žiadny poskytovateľ"} • {block.logs.length} {block.logs.length === 1 ? "záznam" : block.logs.length < 5 ? "záznamy" : "záznamov"}
+                                            </CardDescription>
+                                        </div>
+                                    </div>
+                                    <Badge variant="outline">{blockIndex + 1}. obdobie</Badge>
+                                </div>
+                            </CardHeader>
+
+                            {expandedBlocks.has(blockIndex) && (
+                                <CardContent className="pt-0">
+                                    <div className="rounded-md border">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Dátum a čas</TableHead>
+                                                    <TableHead>Autor</TableHead>
+                                                    <TableHead>Operácia</TableHead>
+                                                    <TableHead>Platnosť STK</TableHead>
+                                                    <TableHead className="hidden md:table-cell">
+                                                        Značka &amp; Model
+                                                    </TableHead>
+                                                    <TableHead>
+                                                        <span className="sr-only">Akcie</span>
+                                                    </TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {block.logs.map((log) => (
+                                                    <TableRow key={log.id}>
+                                                        <TableCell className="font-medium">
+                                                            {log.timestampFormatted || formatDateTime(log.timestamp)}
+                                                        </TableCell>
+                                                        <TableCell>{log.author}</TableCell>
+                                                        <TableCell>
+                                                            <OperationBadge operation={log.operation as OperationType} />
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            {formatDate(log.technicalCheckValidUntil)}
+                                                        </TableCell>
+                                                        <TableCell className="hidden md:table-cell">
+                                                            {log.brand} {log.model}
+                                                        </TableCell>
+                                                        <TableCell className="text-right">
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <Button
+                                                                        aria-haspopup="true"
+                                                                        size="icon"
+                                                                        variant="ghost"
+                                                                    >
+                                                                        <MoreHorizontal className="h-4 w-4" />
+                                                                        <span className="sr-only">Otvoriť menu</span>
+                                                                    </Button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end">
+                                                                    <DropdownMenuLabel>Akcie</DropdownMenuLabel>
+                                                                    <DropdownMenuItem asChild>
+                                                                        <Link
+                                                                            href={`/dashboard/vehicles/${id}/history/${log.id}`}
+                                                                        >
+                                                                            Viac informácií
+                                                                        </Link>
+                                                                    </DropdownMenuItem>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                </CardContent>
+                            )}
+                        </Card>
+                    ))}
+                </div>
             )}
         </div>
     );

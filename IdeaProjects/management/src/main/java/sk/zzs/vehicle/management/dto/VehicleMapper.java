@@ -55,7 +55,6 @@ public class VehicleMapper {
                 .firstRegistrationDate(v.getFirstRegistrationDate())
                 .lastTechnicalCheckDate(v.getLastTechnicalCheckDate())
                 .technicalCheckValidUntil(v.getTechnicalCheckValidUntil())
-                .status(v.getStatus())
                 .providerId(providerId)
                 .providerName(providerName)
                 .providerAssignmentStartDate(v.getProviderAssignmentStartDate())
@@ -79,7 +78,6 @@ public class VehicleMapper {
         v.setFirstRegistrationDate(d.getFirstRegistrationDate());
         v.setLastTechnicalCheckDate(d.getLastTechnicalCheckDate());
         v.setTechnicalCheckValidUntil(d.getTechnicalCheckValidUntil());
-        v.setStatus(d.getStatus());
         v.setFilePaths(d.getFilePaths());
 
         v.setProvider(d.getProviderId() != null
@@ -116,7 +114,6 @@ public class VehicleMapper {
         v.setFirstRegistrationDate(d.getFirstRegistrationDate());
         v.setLastTechnicalCheckDate(d.getLastTechnicalCheckDate());
         v.setTechnicalCheckValidUntil(d.getTechnicalCheckValidUntil());
-        v.setStatus(d.getStatus());
         v.setFilePaths(d.getFilePaths());
 
         v.setProvider    (d.getProviderId()     != null ? em.getReference(Provider.class,     d.getProviderId())     : null);

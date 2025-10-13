@@ -38,7 +38,13 @@ public class VehicleListener {
         log.setFirstRegistrationDate(vehicle.getFirstRegistrationDate());
         log.setLastTechnicalCheckDate(vehicle.getLastTechnicalCheckDate());
         log.setTechnicalCheckValidUntil(vehicle.getTechnicalCheckValidUntil());
-        log.setStatus(vehicle.getStatus() != null ? vehicle.getStatus().name() : null);
+
+        // Capture provider information at time of operation
+        if (vehicle.getProvider() != null) {
+            log.setProviderId(vehicle.getProvider().getId());
+            log.setProviderName(vehicle.getProvider().getName());
+        }
+
         log.setAuthor(CurrentUserProvider.getUsernameOrSystem());
         log.setTimestamp(LocalDateTime.now());
         log.setOperation(op);

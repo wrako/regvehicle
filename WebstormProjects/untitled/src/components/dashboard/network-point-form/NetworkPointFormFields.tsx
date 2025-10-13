@@ -67,17 +67,22 @@ export function NetworkPointFormFields({ control, providers }: Props) {
                 )}
             />
 
-            <DatePickerField control={control} name="validFrom" label="Platné od" />
-            <DatePickerField control={control} name="validTo" label="Platné do" />
+            {/* validFrom removed - auto-set to TODAY on backend */}
+            <DatePickerField control={control} name="validTo" label="Platné do *" />
+
+            <div className="md:col-span-2 border-t pt-4 mt-2">
+                <h3 className="text-sm font-medium mb-3">Poskytovateľ (povinné)</h3>
+                <p className="text-xs text-muted-foreground">Vyberte poskytovateľa, ktorý bude priradený k tomuto bodu siete. Dátum začatia sa automaticky nastaví na dnešný deň.</p>
+            </div>
 
             <FormField
                 control={control}
-                name="providerId"
+                name="queueProviderId"
                 render={({ field }) => (
                     <FormItem>
                         <FormLabel>Poskytovateľ *</FormLabel>
                         <Select
-                            onValueChange={(val) => field.onChange(Number(val))}
+                            onValueChange={(val) => field.onChange(val ? Number(val) : undefined)}
                             value={field.value ? String(field.value) : undefined}
                         >
                             <FormControl>
@@ -96,6 +101,12 @@ export function NetworkPointFormFields({ control, providers }: Props) {
                         <FormMessage />
                     </FormItem>
                 )}
+            />
+
+            <DatePickerField
+                control={control}
+                name="providerRegistrationEndDate"
+                label="Dátum ukončenia registrácie *"
             />
         </>
     );

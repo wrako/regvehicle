@@ -17,6 +17,7 @@ export function useNetworkPointEdit({ id, form, toast }: UseNetworkPointEditProp
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [providers, setProviders] = useState<any[]>([]);
+    const [networkPointData, setNetworkPointData] = useState<NetworkPointDto | null>(null);
     const lastIdRef = useRef<number>(0);
 
     useEffect(() => {
@@ -36,13 +37,14 @@ export function useNetworkPointEdit({ id, form, toast }: UseNetworkPointEditProp
                     getProviders()
                 ]);
                 setProviders(providersData);
+                setNetworkPointData(networkPoint);
                 form.reset({
                     code: networkPoint.code,
                     name: networkPoint.name,
                     type: networkPoint.type as NetworkPointEditFormData["type"],
-                    validFrom: fromApiDate(networkPoint.validFrom) ?? null,
-                    validTo: fromApiDate(networkPoint.validTo) ?? null,
-                    providerId: networkPoint.providerId || 0,
+                    // validFrom removed - managed via queue start dates
+                    validTo: fromApiDate(networkPoint.validTo) ?? undefined as any,
+                    // providerId removed - system auto-sets owner based on queue
                 });
             } catch (error: any) {
                 console.error("Load network point error:", error);
@@ -73,7 +75,7 @@ export function useNetworkPointEdit({ id, form, toast }: UseNetworkPointEditProp
             setSubmitting(true);
             const payload = {
                 ...data,
-                validFrom: toApiDate(data.validFrom ?? undefined),
+                // validFrom removed - managed via queue start dates
                 validTo: toApiDate(data.validTo ?? undefined),
             };
             await updateNetworkPoint(id, payload);
@@ -94,5 +96,18 @@ export function useNetworkPointEdit({ id, form, toast }: UseNetworkPointEditProp
         }
     };
 
-    return { loading, submitting, providers, onSubmit };
+    const reloadQueue = async () => {
+        try {
+            const networkPoint = await getNetworkPoint(id);
+            setNetworkPointData(networkPoint);
+        } catch (error: any) {
+            toast({
+                title: "Error reloading queue",
+                description: error?.message || "Please try again.",
+                variant: "destructive",
+            });
+        }
+    };
+
+    return { loading, submitting, providers, networkPointData, onSubmit, reloadQueue };
 }

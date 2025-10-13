@@ -8,6 +8,8 @@ import org.hibernate.annotations.Where;
 import sk.zzs.vehicle.management.enumer.NetworkPointType;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Data
@@ -30,17 +32,40 @@ public class NetworkPoint {
     @Column(nullable = false)
     private NetworkPointType type;
 
-    /** Platnosť bodu v číselníku (voliteľné) */
+    /** NetworkPoint's own validity dates - REQUIRED */
     private LocalDate validFrom;
+
+    @Column(nullable = false)
     private LocalDate validTo;
 
-    // Relations
+    /**
+     * Simple ownership - metadata only, does NOT make provider "current"
+     * A Provider may own many NetworkPoints (one-to-many)
+     */
     @ManyToOne(fetch = FetchType.LAZY, optional = true)
     @JoinColumn(name = "provider_id", nullable = true)
-    private Provider provider;
+    private Provider owner;
+
+    /**
+     * Provider queue for operational assignment
+     * Ordered by queuePosition (0 = current)
+     */
+    @OneToMany(mappedBy = "networkPoint", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("queuePosition ASC")
+    private List<ProviderNetworkPointRegistration> providerQueue = new ArrayList<>();
 
     @Column(nullable = false)
     private boolean archived = false;
 
-    // getters/setters...
+    /**
+     * Get the current active provider from the queue (position 0)
+     */
+    @Transient
+    public Provider getCurrentProvider() {
+        return providerQueue.stream()
+                .filter(reg -> reg.getQueuePosition() == 0 && reg.isCurrent())
+                .findFirst()
+                .map(ProviderNetworkPointRegistration::getProvider)
+                .orElse(null);
+    }
 }

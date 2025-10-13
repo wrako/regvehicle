@@ -36,8 +36,11 @@ public class Provider {
     @OneToMany(mappedBy = "provider", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Vehicle> vehicles = new ArrayList<>();
 
-    @OneToMany(mappedBy = "provider", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "owner", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<NetworkPoint> networkPoints = new ArrayList<>();
+
+    @Column(length = 20)
+    private String state = "DISABLED";
 
     @Column(nullable = false)
     private boolean archived = false;

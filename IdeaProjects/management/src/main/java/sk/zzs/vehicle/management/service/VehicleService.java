@@ -2,6 +2,7 @@ package sk.zzs.vehicle.management.service;
 
 import jakarta.persistence.NoResultException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -14,9 +15,12 @@ import sk.zzs.vehicle.management.dto.VehicleFilter;
 import sk.zzs.vehicle.management.dto.VehicleMapper;
 import sk.zzs.vehicle.management.entity.Provider;
 import sk.zzs.vehicle.management.entity.Vehicle;
-import sk.zzs.vehicle.management.enumer.VehicleStatus;
+import sk.zzs.vehicle.management.entity.VehicleLog;
+import sk.zzs.vehicle.management.enumer.OperationType;
+import sk.zzs.vehicle.management.repository.VehicleLogRepository;
 import sk.zzs.vehicle.management.repository.VehicleRepository;
 import sk.zzs.vehicle.management.repository.VehicleSpecifications;
+import sk.zzs.vehicle.management.util.CurrentUserProvider;
 
 import java.io.IOException;
 import java.nio.file.*;
@@ -33,7 +37,14 @@ public class VehicleService {
     private VehicleRepository vehicleRepository;
 
     @Autowired
+    private VehicleLogRepository vehicleLogRepository;
+
+    @Autowired
     private VehicleMapper vehicleMapper;
+
+    @Autowired
+    @Lazy
+    private ProviderService providerService;
 
     // Base folder where files will be stored (adjust for your OS/env)
     private static final Path BASE_UPLOAD_DIR = Paths.get("C:/uploads/vehicles");
@@ -61,24 +72,29 @@ public class VehicleService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Provider assignment end date is required");
         }
 
+        // Validate: VIN must not exist in any vehicle (active or archived)
+        if (dto.getVinNum() != null && !dto.getVinNum().isBlank()) {
+            if (vehicleRepository.countByVinNumIncludingArchived(dto.getVinNum()) > 0) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Vehicle with VIN number '" + dto.getVinNum() + "' already exists (active or archived). Cannot register duplicate VIN.");
+            }
+        }
+
+        // Validate: License plate must not exist in any vehicle (active or archived)
+        if (dto.getLicensePlate() != null && !dto.getLicensePlate().isBlank()) {
+            if (vehicleRepository.countByLicensePlateIncludingArchived(dto.getLicensePlate()) > 0) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Vehicle with license plate '" + dto.getLicensePlate() + "' already exists (active or archived). Cannot register duplicate license plate.");
+            }
+        }
+
         // Auto-set startDate to today
         dto.setProviderAssignmentStartDate(java.time.LocalDate.now());
 
         Vehicle entity = vehicleMapper.toEntity(dto);
-
-        // NEW: archive previous active vehicle with same VIN and mark new as PREREGISTERED
-        if (dto.getVinNum() != null && !dto.getVinNum().isBlank()) {
-            Optional<Vehicle> existingOpt = vehicleRepository.findByVinNum(dto.getVinNum());
-            if (existingOpt.isPresent()) {
-                Vehicle existing = existingOpt.get();
-                // archive existing active vehicle (keep your audit parameters)
-                existing.setStatus(VehicleStatus.DEREGISTERED);
-                vehicleRepository.archiveById(existing.getId(), "system", "VIN replaced by new registration");
-                entity.setStatus(VehicleStatus.PREREGISTERED);
-            }
-        }
-
+        Long providerId = entity.getProvider() != null ? entity.getProvider().getId() : null;
         Vehicle saved = vehicleRepository.save(entity);
+        refreshProviderStates(providerId);
         return vehicleMapper.toDto(saved);
     }
 
@@ -90,6 +106,24 @@ public class VehicleService {
         Vehicle entity = vehicleRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Vehicle with id " + id + " not found"));
 
+        // Validate: VIN must not exist in any other vehicle (active or archived)
+        if (dto.getVinNum() != null && !dto.getVinNum().isBlank()) {
+            if (vehicleRepository.countByVinNumExcludingId(dto.getVinNum(), id) > 0) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Vehicle with VIN number '" + dto.getVinNum() + "' already exists (active or archived). Cannot use duplicate VIN.");
+            }
+        }
+
+        // Validate: License plate must not exist in any other vehicle (active or archived)
+        if (dto.getLicensePlate() != null && !dto.getLicensePlate().isBlank()) {
+            if (vehicleRepository.countByLicensePlateExcludingId(dto.getLicensePlate(), id) > 0) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Vehicle with license plate '" + dto.getLicensePlate() + "' already exists (active or archived). Cannot use duplicate license plate.");
+            }
+        }
+
+        Long previousProviderId = entity.getProvider() != null ? entity.getProvider().getId() : null;
+
         // Check if provider is being removed (manual unassign)
         boolean hadProvider = entity.getProvider() != null;
         boolean removingProvider = hadProvider && (dto.getProviderId() == null || dto.getProviderId() == 0);
@@ -100,8 +134,8 @@ public class VehicleService {
             entity.setProviderAssignmentStartDate(null);
             entity.setProviderAssignmentEndDate(null);
             entity.setArchived(true);
-            entity.setStatus(VehicleStatus.DEREGISTERED);
             Vehicle saved = vehicleRepository.save(entity);
+            refreshProviderStates(previousProviderId);
             return vehicleMapper.toDto(saved);
         }
 
@@ -119,13 +153,18 @@ public class VehicleService {
         }
 
         vehicleMapper.copyToEntity(dto, entity);
+        Long newProviderId = entity.getProvider() != null ? entity.getProvider().getId() : null;
         Vehicle saved = vehicleRepository.save(entity);
+        refreshProviderStates(previousProviderId, newProviderId);
         return vehicleMapper.toDto(saved);
     }
 
     public void delete(Long id) {
-        if (!vehicleRepository.existsById(id)) throw CrudUtils.notFound("Vehicle", id);
-        vehicleRepository.deleteById(id);
+        Vehicle entity = vehicleRepository.findById(id)
+                .orElseThrow(() -> CrudUtils.notFound("Vehicle", id));
+        Long providerId = entity.getProvider() != null ? entity.getProvider().getId() : null;
+        vehicleRepository.delete(entity);
+        refreshProviderStates(providerId);
     }
 
     @Transactional(readOnly = true)
@@ -187,22 +226,62 @@ public class VehicleService {
         return (s == null) ? "unknown" : s.replaceAll("[^a-zA-Z0-9._-]", "_");
     }
 
-    public VehicleDto archiveVehicle(Long id, String reason, VehicleStatus status) {
+    private void refreshProviderStates(Long... providerIds) {
+        if (providerService == null || providerIds == null) {
+            return;
+        }
+
+        Arrays.stream(providerIds)
+                .filter(Objects::nonNull)
+                .distinct()
+                .forEach(providerService::refreshStateForProvider);
+    }
+
+    /**
+     * Manually create a log entry for operations not captured by entity listeners (ARCHIVE, UNARCHIVE)
+     */
+    private void createManualLog(Vehicle vehicle, OperationType operation) {
+        VehicleLog log = new VehicleLog();
+        log.setVehicleId(vehicle.getId());
+        log.setLicensePlate(vehicle.getLicensePlate());
+        log.setVinNum(vehicle.getVinNum());
+        log.setBrand(vehicle.getBrand());
+        log.setModel(vehicle.getModel());
+        log.setFirstRegistrationDate(vehicle.getFirstRegistrationDate());
+        log.setLastTechnicalCheckDate(vehicle.getLastTechnicalCheckDate());
+        log.setTechnicalCheckValidUntil(vehicle.getTechnicalCheckValidUntil());
+
+        // Capture provider information at time of operation
+        if (vehicle.getProvider() != null) {
+            log.setProviderId(vehicle.getProvider().getId());
+            log.setProviderName(vehicle.getProvider().getName());
+        }
+
+        log.setAuthor(CurrentUserProvider.getUsernameOrSystem());
+        log.setTimestamp(java.time.LocalDateTime.now());
+        log.setOperation(operation);
+        vehicleLogRepository.save(log);
+    }
+
+    public VehicleDto archiveVehicle(Long id, String reason) {
         Vehicle existing = vehicleRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Vehicle not found: " + id));
 
-//        vehicleRepository.archiveById(id, "system", reason);
+        Long previousProviderId = existing.getProvider() != null ? existing.getProvider().getId() : null;
+
+        // Log ARCHIVE operation before removing provider
+        createManualLog(existing, OperationType.ARCHIVE);
 
         // Because of @Where, the managed entity may still read archived=false until cleared/refresh.
         // Return a DTO based on known state:
         existing.setProvider(null);
-        existing.setStatus(status);
         existing.setArchived(true);
 //        existing.setArchivedReason(reason);
+        refreshProviderStates(previousProviderId);
         return vehicleMapper.toDto(existing);
     }
 
-    public VehicleDto unarchiveVehicle(Long id, VehicleStatus status, Long newProviderId, java.time.LocalDate newEndDate) {
+    public VehicleDto unarchiveVehicle(Long id, Long newProviderId, java.time.LocalDate newEndDate) {
 
         // Validate: endDate must be in the future (not today or past)
         if (!newEndDate.isAfter(java.time.LocalDate.now())) {
@@ -232,9 +311,13 @@ public class VehicleService {
         v.setProvider(newProvider);
         v.setProviderAssignmentStartDate(java.time.LocalDate.now());
         v.setProviderAssignmentEndDate(newEndDate);
-        v.setStatus(status);
 
         vehicleRepository.save(v);
+
+        // Log UNARCHIVE operation after setting new provider
+        createManualLog(v, OperationType.UNARCHIVE);
+
+        refreshProviderStates(newProviderId);
         return vehicleMapper.toDto(v);
     }
 
@@ -260,7 +343,7 @@ public class VehicleService {
 
         for (Vehicle vehicle : expiredVehicles) {
             try {
-                archiveVehicle(vehicle.getId(), "Expired assignment", VehicleStatus.DEREGISTERED);
+                archiveVehicle(vehicle.getId(), "Expired assignment");
                 archivedIds.add(vehicle.getId());
                 count++;
             } catch (Exception e) {

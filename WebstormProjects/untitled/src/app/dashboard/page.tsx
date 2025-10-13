@@ -10,29 +10,13 @@ import {
 } from "@/components/ui/card";
 import VehicleFilters from "@/components/dashboard/vehicle-filters";
 import VehicleTable from "@/components/dashboard/vehicle-table";
-import type { Vehicle, VehicleStatus } from "@/types";
+import type { Vehicle } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Archive } from "lucide-react";
 import Link from "next/link";
 import { API_BASE } from "@/constants/api";
 import { cancellableFetch } from "@/utils/fetchUtils";
 import { fromApiDate } from "@/lib/date";
-
-const uiToApiStatus: Record<VehicleStatus, string> = {
-    aktívne: "ACTIVE",
-    rezerva: "RESERVE",
-    vyradené: "DEREGISTERED",
-    "dočasne vyradené": "TEMP_DEREGISTERED",
-    preregistrované: "PREREGISTERED",
-};
-
-const apiToUiStatus: Record<string, VehicleStatus> = {
-    ACTIVE: "aktívne",
-    RESERVE: "rezerva",
-    DEREGISTERED: "vyradené",
-    TEMP_DEREGISTERED: "dočasne vyradené",
-    PREREGISTERED: "preregistrované",
-};
 
 function toDateOrNull(s?: string | null) {
     return fromApiDate(s ?? undefined) ?? null;
@@ -51,7 +35,6 @@ function mapApiToUi(v: any): Vehicle {
         networkPoint: v.networkPointId ? String(v.networkPointId) : "",
         networkPointLabel: v.networkPointName || "—",
 
-        status: apiToUiStatus[v.status] || "aktívne",
         stkDate: toDateOrNull(v.technicalCheckValidUntil),
         firstRegistration: toDateOrNull(v.firstRegistrationDate),
 
@@ -65,9 +48,8 @@ function mapApiToUi(v: any): Vehicle {
 
 export default function DashboardPage() {
     const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-    const [filters, setFilters] = useState<{ query: string; status: VehicleStatus | "all" }>({
+    const [filters, setFilters] = useState<{ query: string }>({
         query: "",
-        status: "all",
     });
     const [loading, setLoading] = useState(false);
     const lastQueryKeyRef = useRef<string>("");
@@ -75,9 +57,6 @@ export default function DashboardPage() {
     const queryParams = useMemo(() => {
         const params = new URLSearchParams();
         if (filters.query) params.append("q", filters.query);
-        if (filters.status !== "all") {
-            params.append("status", uiToApiStatus[filters.status]);
-        }
         params.append("size", "1000");
         params.append("page", "0");
         return params.toString();

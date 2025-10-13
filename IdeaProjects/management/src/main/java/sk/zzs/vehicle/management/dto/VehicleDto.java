@@ -2,7 +2,6 @@ package sk.zzs.vehicle.management.dto;// VehicleDto.java
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
-import sk.zzs.vehicle.management.enumer.VehicleStatus;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -23,8 +22,6 @@ public class VehicleDto {
     private LocalDate firstRegistrationDate;
     private LocalDate lastTechnicalCheckDate;
     private LocalDate technicalCheckValidUntil;
-
-    private VehicleStatus status;
 
     // flat IDs used by your mapper
     private Long providerId;

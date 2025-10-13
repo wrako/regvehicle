@@ -18,7 +18,7 @@ import {
     DropdownMenuLabel,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { Vehicle, VehicleStatus } from "@/types";
+import type { Vehicle } from "@/types";
 import { formatDate } from "@/lib/date";
 import Link from "next/link";
 import * as React from "react";
@@ -28,42 +28,6 @@ import { API_BASE } from "@/constants/api";
 interface VehicleTableProps {
     vehicles: Vehicle[];
 }
-
-const StatusBadge = ({ status }: { status: VehicleStatus }) => {
-    const statusLabels: Record<VehicleStatus, string> = {
-        aktívne: "Aktívne",
-        rezerva: "Rezerva",
-        vyradené: "Vyradené",
-        "dočasne vyradené": "Dočasne vyradené",
-        preregistrované: "Preregistrované",
-    };
-
-    const variantMap: Record<
-        VehicleStatus,
-        "default" | "secondary" | "destructive" | "outline"
-    > = {
-        aktívne: "default",
-        rezerva: "secondary",
-        vyradené: "destructive",
-        "dočasne vyradené": "outline",
-        preregistrované: "secondary",
-    };
-
-    const variant = variantMap[status];
-    let className =
-        status === "aktívne"
-            ? "bg-green-100 text-green-800 border-green-200 hover:bg-green-200"
-            : "";
-    if (status === "dočasne vyradené") {
-        className += " whitespace-nowrap";
-    }
-
-    return (
-        <Badge variant={variant} className={`capitalize ${className}`}>
-            {statusLabels[status]}
-        </Badge>
-    );
-};
 
 export default function ArchivedVehicleTable({ vehicles }: VehicleTableProps) {
     const [localVehicles, setLocalVehicles] = React.useState<Vehicle[]>(vehicles);
@@ -97,7 +61,6 @@ export default function ArchivedVehicleTable({ vehicles }: VehicleTableProps) {
                         <TableHead>Značka</TableHead>
                         <TableHead className="hidden md:table-cell">Model</TableHead>
                         <TableHead>Poskytovateľ</TableHead>
-                        <TableHead>Stav</TableHead>
                         <TableHead className="hidden lg:table-cell">Platnosť STK</TableHead>
                         <TableHead>
                             <span className="sr-only">Akcie</span>
@@ -114,9 +77,6 @@ export default function ArchivedVehicleTable({ vehicles }: VehicleTableProps) {
                                     {vehicle.model}
                                 </TableCell>
                                 <TableCell>{vehicle.providerLabel}</TableCell>
-                                <TableCell>
-                                    <StatusBadge status={vehicle.status} />
-                                </TableCell>
                                 <TableCell className="hidden lg:table-cell">
                                     {formatDate(vehicle.stkDate) || "—"}
                                 </TableCell>
@@ -156,7 +116,7 @@ export default function ArchivedVehicleTable({ vehicles }: VehicleTableProps) {
                         ))
                     ) : (
                         <TableRow>
-                            <TableCell colSpan={7} className="h-24 text-center">
+                            <TableCell colSpan={6} className="h-24 text-center">
                                 Žiadne archivované vozidlá sa nenašli.
                             </TableCell>
                         </TableRow>

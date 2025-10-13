@@ -15,7 +15,7 @@ import java.util.Optional;
 
 public interface NetworkPointRepository extends JpaRepository<NetworkPoint, Long> {
 
-    @Query("SELECT COUNT(np) FROM NetworkPoint np WHERE np.provider.id = :providerId")
+    @Query("SELECT COUNT(np) FROM NetworkPoint np WHERE np.owner.id = :providerId")
     long countByProviderId(@Param("providerId") Long providerId);
 
     @Transactional

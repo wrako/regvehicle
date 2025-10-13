@@ -25,35 +25,6 @@ export function VehicleStatusFields({ control, providerOptions }: Props) {
         <>
             <FormField
                 control={control}
-                name="status"
-                render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Status *</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Vyber status" />
-                                </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                                <SelectItem value="aktívne">Aktívne</SelectItem>
-                                <SelectItem value="rezerva">Rezerva</SelectItem>
-                                <SelectItem value="vyradené">Vyradené</SelectItem>
-                                <SelectItem value="dočasne vyradené">
-                                    Dočasne vyradené
-                                </SelectItem>
-                                <SelectItem value="preregistrované">
-                                    Preregistrované
-                                </SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                    </FormItem>
-                )}
-            />
-
-            <FormField
-                control={control}
                 name="providerId"
                 render={({ field }) => (
                     <FormItem>

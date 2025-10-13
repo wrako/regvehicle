@@ -1,6 +1,7 @@
 package sk.zzs.vehicle.management.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -20,6 +21,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
@@ -40,6 +42,13 @@ public class NetworkPointService {
     @Autowired
     private NetworkPointMapper networkPointMapper;
 
+    @Autowired
+    private NetworkPointQueueService queueService;
+
+    @Autowired
+    @Lazy
+    private ProviderService providerService;
+
     @Transactional(readOnly = true)
     public List<NetworkPointDto> getAllNetworkPoints() {
         return networkPointRepository.findAll()
@@ -55,22 +64,45 @@ public class NetworkPointService {
                 .orElseThrow(() -> CrudUtils.notFound("NetworkPoint", id));
     }
 
-    public NetworkPointDto createNetworkPoint(NetworkPointDto dto) {
-        // Provider is required for new network points
-        if (dto.getProviderId() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Provider is required for network point creation");
+    public NetworkPointDto createNetworkPoint(NetworkPointDto dto, boolean bypassCapacityCheck) {
+        // Validate: NetworkPoint validTo is REQUIRED
+        if (dto.getValidTo() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "NetworkPoint validTo date is required");
+        }
+
+        // Validate: EXACTLY ONE provider is REQUIRED on create
+        if (dto.getQueueProviderId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Exactly one provider is required when creating a NetworkPoint");
+        }
+
+        if (dto.getProviderRegistrationEndDate() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Provider registration end date is required");
         }
 
         NetworkPoint entity = networkPointMapper.toEntity(dto);
 
-        Provider provider = providerRepository.findById(dto.getProviderId())
-                .orElseThrow(() -> CrudUtils.notFound("Provider", dto.getProviderId()));
-        // Enforce capacity rule BEFORE assigning
-        ensureProviderCapacity(provider.getId(), /*assigningOneMore*/ true);
+        // Auto-set validFrom to TODAY
+        entity.setValidFrom(LocalDate.now());
 
-        entity.setProvider(provider);
+        Provider queueProvider = providerRepository.findById(dto.getQueueProviderId())
+                .orElseThrow(() -> CrudUtils.notFound("Provider", dto.getQueueProviderId()));
 
+        // Owner is MANDATORY and always equals the active (current) provider
+        // On create, the queue provider becomes current, so set owner to queue provider
+        entity.setOwner(queueProvider);
+
+        // Enforce capacity rule for queue provider (unless bypassed)
+        ensureProviderCapacity(queueProvider.getId(), /*assigningOneMore*/ true, bypassCapacityCheck);
+
+        // Save NetworkPoint first
         NetworkPoint saved = networkPointRepository.save(entity);
+
+        // Add provider to queue (becomes current, position 0, start date = TODAY)
+        queueService.addProviderToQueue(saved.getId(), dto.getQueueProviderId(), dto.getProviderRegistrationEndDate());
+        refreshProviderStates(queueProvider.getId());
+
         return networkPointMapper.toDto(saved);
     }
 
@@ -78,32 +110,30 @@ public class NetworkPointService {
         NetworkPoint entity = networkPointRepository.findById(id)
                 .orElseThrow(() -> CrudUtils.notFound("NetworkPoint", id));
 
-        // If provider reassignment requested, enforce capacity rule for target provider
-        if (dto.getProviderId() != null) {
-            Long currentProviderId = entity.getProvider() != null ? entity.getProvider().getId() : null;
-            if (!dto.getProviderId().equals(currentProviderId)) {
-                Provider newProvider = providerRepository.findById(dto.getProviderId())
-                        .orElseThrow(() -> CrudUtils.notFound("Provider", dto.getProviderId()));
-                // Enforce capacity WITH this network point added (nn + 1)
-                ensureProviderCapacity(newProvider.getId(), /*assigningOneMore*/ true);
-                entity.setProvider(newProvider);
-            }
-        }
+        Long previousOwnerId = entity.getOwner() != null ? entity.getOwner().getId() : null;
 
-        // Map other updatable fields
+        // Map updatable fields (name, type, dates, etc.)
         networkPointMapper.copyToEntity(dto, entity);
 
+        // Owner is MANDATORY and always equals the current (active) provider from queue
+        // Update owner to match current provider after any queue changes
+        Provider currentProvider = entity.getCurrentProvider();
+        entity.setOwner(currentProvider);
+
         NetworkPoint saved = networkPointRepository.save(entity);
+        refreshProviderStates(previousOwnerId, currentProvider != null ? currentProvider.getId() : null);
         return networkPointMapper.toDto(saved);
     }
 
     public void deleteNetworkPoint(Long id) {
-        if (!networkPointRepository.existsById(id)) {
-            throw CrudUtils.notFound("NetworkPoint", id);
-        }
+        NetworkPoint entity = networkPointRepository.findById(id)
+                .orElseThrow(() -> CrudUtils.notFound("NetworkPoint", id));
+
+        Long ownerId = entity.getOwner() != null ? entity.getOwner().getId() : null;
 
         // NetworkPoints can now be deleted freely since they're not directly referenced by vehicles
-        networkPointRepository.deleteById(id);
+        networkPointRepository.delete(entity);
+        refreshProviderStates(ownerId);
     }
 
     // Legacy method for Vehicle service
@@ -116,10 +146,12 @@ public class NetworkPointService {
      * where nn is current number of network points and addOne indicates whether we're
      * validating for adding this network point now.
      *
-     * If the requirement is not met, throws 409 with the message:
+     * If the requirement is not met and bypass is false, throws 409 with the message:
      * "Provider has only N vehicles but must have X vehicles."
+     *
+     * If bypass is true, logs a warning instead of throwing an exception.
      */
-    private void ensureProviderCapacity(Long providerId, boolean assigningOneMore) {
+    private void ensureProviderCapacity(Long providerId, boolean assigningOneMore, boolean bypassCapacityCheck) {
         long nn = networkPointRepository.countByProviderId(providerId);
         if (assigningOneMore) {
             // we are about to add one more NP, so check against (nn + 1)
@@ -129,10 +161,18 @@ public class NetworkPointService {
         long have = vehicleRepository.countByProviderId(providerId);
 
         if (have < required) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Provider has only " + have + " vehicles but must have " + required + " vehicles."
-            );
+            String message = "Provider " + providerId + " has only " + have + " vehicles but should have " + required + " vehicles.";
+
+            if (bypassCapacityCheck) {
+                // Log warning but allow assignment
+                System.out.println("⚠️ CAPACITY CHECK BYPASSED: " + message);
+            } else {
+                // Block assignment
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "Provider has only " + have + " vehicles but must have " + required + " vehicles."
+                );
+            }
         }
     }
 
@@ -140,28 +180,71 @@ public class NetworkPointService {
         NetworkPoint existing = networkPointRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "NetworkPoint not found: " + id));
 
-        // Because of @Where, the managed entity may still read archived=false until cleared/refresh.
-        // Return a DTO based on known state:
+        // Clear entire queue when archiving
+        Long ownerId = existing.getOwner() != null ? existing.getOwner().getId() : null;
+
+        queueService.clearQueue(id);
+
         existing.setArchived(true);
+        networkPointRepository.save(existing);
+        refreshProviderStates(ownerId);
         return networkPointMapper.toDto(existing);
     }
 
-    public NetworkPointDto unarchiveNetworkPoint(Long id) {
+    public NetworkPointDto unarchiveNetworkPoint(Long id, Long newProviderId, LocalDate providerEndDate, LocalDate npValidTo, boolean bypassCapacityCheck) {
         NetworkPoint archivedRef = networkPointRepository.findArchivedById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Archived network point not found: " + id));
 
-        // Enforce capacity rule if provider exists
-        if (archivedRef.getProvider() != null) {
-            ensureProviderCapacity(archivedRef.getProvider().getId(), /*assigningOneMore*/ true);
+        // Validate: provider, providerEndDate, and npValidTo are ALL REQUIRED on unarchive
+        if (newProviderId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Provider is required when unarchiving network point");
         }
+        if (providerEndDate == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Provider registration end date is required");
+        }
+        if (npValidTo == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "NetworkPoint validity end date is required");
+        }
+
+        // Validate: endDate must be AFTER today
+        if (!providerEndDate.isAfter(LocalDate.now())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Provider registration end date must be in the future (after today)");
+        }
+
+        if (!npValidTo.isAfter(LocalDate.now())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "NetworkPoint validity end date must be in the future (after today)");
+        }
+
+        Provider newProvider = providerRepository.findById(newProviderId)
+                .orElseThrow(() -> CrudUtils.notFound("Provider", newProviderId));
+
+        // Enforce capacity rule (unless bypassed)
+        ensureProviderCapacity(newProvider.getId(), /*assigningOneMore*/ true, bypassCapacityCheck);
 
         int updated = networkPointRepository.unarchiveById(id);
         if (updated == 0) throw new ResponseStatusException(NOT_FOUND, "NetworkPoint not found: " + id);
 
-        // Reload (optional) if you need full data; @Where will show it now since archived=false.
         NetworkPoint np = networkPointRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "NetworkPoint not found after unarchive: " + id));
 
+        Long previousOwnerId = np.getOwner() != null ? np.getOwner().getId() : null;
+
+        np.setArchived(false);
+        // Set new validFrom to TODAY and new validTo
+        np.setValidFrom(LocalDate.now());
+        np.setValidTo(npValidTo);
+
+        // Owner is MANDATORY and equals the active provider
+        // Set owner to the new provider (will become current)
+        np.setOwner(newProvider);
+
+        // Initialize queue with new provider (becomes current, position 0, start date = TODAY)
+        queueService.addProviderToQueue(id, newProviderId, providerEndDate);
+
+        networkPointRepository.save(np);
+        refreshProviderStates(previousOwnerId, newProvider.getId());
         return networkPointMapper.toDto(np);
     }
 
@@ -209,5 +292,16 @@ public class NetworkPointService {
             result.put("errors", errors);
         }
         return result;
+    }
+
+    private void refreshProviderStates(Long... providerIds) {
+        if (providerService == null || providerIds == null) {
+            return;
+        }
+
+        java.util.Arrays.stream(providerIds)
+                .filter(Objects::nonNull)
+                .distinct()
+                .forEach(providerService::refreshStateForProvider);
     }
 }

@@ -41,14 +41,16 @@ export function NewNetworkPointForm() {
             code: "",
             name: "",
             type: "RLP",
-            validFrom: undefined,
+            // validFrom removed - auto-set to TODAY on backend
             validTo: undefined,
-            providerId: undefined as unknown as number,
+            // providerId removed from CREATE - only ONE provider (queueProviderId)
+            queueProviderId: undefined, // REQUIRED - EXACTLY ONE provider
+            providerRegistrationEndDate: undefined, // REQUIRED
         },
     });
 
     async function onSubmit(v: NetworkPointFormValues) {
-        const success = await submitNetworkPoint(v, toast);
+        const success = await submitNetworkPoint(v, toast, true); // Always bypass capacity check
         if (success) {
             router.push("/dashboard/network-points");
         }

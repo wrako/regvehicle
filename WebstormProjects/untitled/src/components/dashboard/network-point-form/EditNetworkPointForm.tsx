@@ -80,46 +80,13 @@ export function EditNetworkPointForm({ form, providers, submitting, onSubmit }: 
                     )}
                 />
 
-                <FormField
+                {/* Owner removed - system auto-sets based on current provider in queue */}
+                {/* validFrom removed - managed via queue start dates */}
+                <DatePickerField
                     control={form.control}
-                    name="providerId"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Provider</FormLabel>
-                            <Select
-                                onValueChange={(value) => field.onChange(parseInt(value, 10))}
-                                value={field.value?.toString()}
-                            >
-                                <FormControl>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select provider" />
-                                    </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                    {providers.map((provider) => (
-                                        <SelectItem key={provider.id} value={provider.id.toString()}>
-                                            {provider.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                        </FormItem>
-                    )}
+                    name="validTo"
+                    label="Valid To *"
                 />
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <DatePickerField
-                        control={form.control}
-                        name="validFrom"
-                        label="Valid From (Optional)"
-                    />
-                    <DatePickerField
-                        control={form.control}
-                        name="validTo"
-                        label="Valid To (Optional)"
-                    />
-                </div>
 
                 <div className="flex gap-4">
                     <Button type="submit" disabled={submitting}>

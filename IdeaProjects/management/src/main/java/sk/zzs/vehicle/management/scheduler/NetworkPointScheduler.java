@@ -17,7 +17,7 @@ public class NetworkPointScheduler {
      * Daily job at 02:05 to archive expired NetworkPoints.
      * Runs at 02:05 every day using cron expression.
      */
-    @Scheduled(cron = "0 0 1 * * *")
+    @Scheduled(cron = "0 14 11 * * *")
     public void archiveExpiredNetworkPoints() {
         Map<String, Object> result = networkPointService.checkAndArchiveExpiredNetworkPoints();
         System.out.println("Scheduled expiration check completed: " + result);

@@ -20,13 +20,9 @@ export function useVehicleActions() {
         }
     };
 
-    const handleArchive = async (vehicleId: number, status: string, reason: string): Promise<boolean> => {
+    const handleArchive = async (vehicleId: number, reason: string): Promise<boolean> => {
         try {
             const params = new URLSearchParams();
-            params.append(
-                "status",
-                status === "DOČASNE VYRADENÉ" ? "TEMP_DEREGISTERED" : "DEREGISTERED"
-            );
             if (reason) params.append("reason", reason);
 
             const res = await fetch(

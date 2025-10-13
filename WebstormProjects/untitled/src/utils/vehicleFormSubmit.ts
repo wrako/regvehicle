@@ -1,5 +1,4 @@
 import { createVehicle, editVehicle } from "@/lib/api";
-import { vinExists, uploadVehicleFiles } from "@/utils";
 import { toApiDate } from "@/lib/date";
 
 type FormValues = {
@@ -10,18 +9,9 @@ type FormValues = {
     firstRegistrationDate?: Date;
     lastTechnicalCheckDate?: Date;
     technicalCheckValidUntil: Date;
-    status: "aktívne" | "rezerva" | "vyradené" | "dočasne vyradené" | "preregistrované";
     providerId: string;
     providerAssignmentEndDate: Date;
     files?: any;
-};
-
-const statusMap: Record<FormValues["status"], string> = {
-    aktívne: "ACTIVE",
-    rezerva: "RESERVE",
-    vyradené: "DEREGISTERED",
-    "dočasne vyradené": "TEMP_DEREGISTERED",
-    preregistrované: "PREREGISTERED",
 };
 
 export function buildVehiclePayload(v: FormValues, edit: boolean, vehicleId?: string) {
@@ -34,7 +24,6 @@ export function buildVehiclePayload(v: FormValues, edit: boolean, vehicleId?: st
         firstRegistrationDate: toApiDate(v.firstRegistrationDate) ?? null,
         lastTechnicalCheckDate: toApiDate(v.lastTechnicalCheckDate) ?? null,
         technicalCheckValidUntil: toApiDate(v.technicalCheckValidUntil) ?? "",
-        status: statusMap[v.status],
         providerId: v.providerId,
         providerAssignmentEndDate: toApiDate(v.providerAssignmentEndDate) ?? "",
     };
@@ -44,10 +33,6 @@ export async function submitVehicle(payload: any, edit: boolean, vehicleId?: str
     if (edit && vehicleId) {
         return await editVehicle(vehicleId, payload);
     } else {
-        const vin = (payload.vinNum || "").toUpperCase().trim();
-        if (vin && (await vinExists(vin))) {
-            return { needsConfirmation: true, payload };
-        }
         return await createVehicle(payload);
     }
 }

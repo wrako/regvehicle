@@ -3,11 +3,13 @@ package sk.zzs.vehicle.management.controller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import sk.zzs.vehicle.management.dto.NetworkPointDto;
 import sk.zzs.vehicle.management.service.NetworkPointService;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -31,8 +33,10 @@ public class NetworkPointController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public NetworkPointDto createNetworkPoint(@RequestBody NetworkPointDto networkPointDto) {
-        return networkPointService.createNetworkPoint(networkPointDto);
+    public NetworkPointDto createNetworkPoint(
+            @RequestBody NetworkPointDto networkPointDto,
+            @RequestParam(value = "bypassCapacityCheck", required = false, defaultValue = "false") boolean bypassCapacityCheck) {
+        return networkPointService.createNetworkPoint(networkPointDto, bypassCapacityCheck);
     }
 
     @PutMapping("/{id}")
@@ -53,8 +57,13 @@ public class NetworkPointController {
     }
 
     @PostMapping("/{id}/unarchive")
-    public NetworkPointDto unarchive(@PathVariable Long id) {
-        return networkPointService.unarchiveNetworkPoint(id);
+    public NetworkPointDto unarchive(
+            @PathVariable Long id,
+            @RequestParam(value = "providerId") Long providerId,
+            @RequestParam(value = "providerRegistrationEndDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate providerEndDate,
+            @RequestParam(value = "networkPointValidTo") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate npValidTo,
+            @RequestParam(value = "bypassCapacityCheck", required = false, defaultValue = "false") boolean bypassCapacityCheck) {
+        return networkPointService.unarchiveNetworkPoint(id, providerId, providerEndDate, npValidTo, bypassCapacityCheck);
     }
 
     @GetMapping("/archived/page")

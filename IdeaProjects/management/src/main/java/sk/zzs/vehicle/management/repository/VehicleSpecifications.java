@@ -6,7 +6,6 @@ import sk.zzs.vehicle.management.dto.VehicleFilter;
 import sk.zzs.vehicle.management.entity.Vehicle;
 import sk.zzs.vehicle.management.entity.Provider;
 import sk.zzs.vehicle.management.entity.NetworkPoint;
-import sk.zzs.vehicle.management.enumer.VehicleStatus;
 
 import java.time.LocalDate;
 import java.util.Locale;
@@ -20,7 +19,6 @@ public final class VehicleSpecifications {
         if (f == null) return spec;
 
         if (notBlank(f.q()))              spec = spec.and(textSearch(f.q()));
-        if (notBlank(f.status()))         spec = spec.and(statusEquals(f.status()));
         if (notBlank(f.provider()))       spec = spec.and(providerMatches(f.provider()));
         if (f.stkValidFrom() != null)     spec = spec.and(stkFrom(f.stkValidFrom()));
         if (f.stkValidTo() != null)       spec = spec.and(stkTo(f.stkValidTo()));
@@ -35,7 +33,7 @@ public final class VehicleSpecifications {
     /** Case-insensitive LIKE pattern */
     private static String like(String q) { return "%" + q.toLowerCase(Locale.ROOT) + "%"; }
 
-    /** Full-text-ish search across common fields (LP/brand/model/status/provider/network point). */
+    /** Full-text-ish search across common fields (LP/brand/model/provider/network point). */
     private static Specification<Vehicle> textSearch(String q) {
         return (root, cq, cb) -> {
             var like = like(q);
@@ -48,22 +46,11 @@ public final class VehicleSpecifications {
                     cb.like(cb.lower(root.get("licensePlate")), like),
                     cb.like(cb.lower(root.get("brand")), like),
                     cb.like(cb.lower(root.get("model")), like),
-                    cb.like(cb.lower(root.get("status").as(String.class)), like), // enum -> String
                     cb.like(cb.lower(provider.get("name")), like),
                     cb.like(cb.lower(provider.get("providerId")), like),
                     cb.like(cb.lower(point.get("name")), like),
                     cb.like(cb.lower(point.get("code")), like)
             );
-        };
-    }
-
-    /** status passed as String -> match Enum (case/space/underscore tolerant). */
-    private static Specification<Vehicle> statusEquals(String status) {
-        return (root, cq, cb) -> {
-            var enumValue = parseStatus(status);
-            return (enumValue == null)
-                    ? cb.conjunction() // ignore invalid value
-                    : cb.equal(root.get("status"), enumValue);
         };
     }
 
@@ -86,19 +73,5 @@ public final class VehicleSpecifications {
 
     private static Specification<Vehicle> stkTo(LocalDate to) {
         return (root, cq, cb) -> cb.lessThanOrEqualTo(root.get("technicalCheckValidUntil"), to);
-    }
-
-    /* Map string -> VehicleStatus enum safely */
-    private static VehicleStatus parseStatus(String s) {
-        if (!notBlank(s)) return null;
-        String norm = s.trim()
-                .replace('-', '_')
-                .replace(' ', '_')
-                .toUpperCase(Locale.ROOT);
-        try {
-            return VehicleStatus.valueOf(norm);
-        } catch (IllegalArgumentException ex) {
-            return null; // unknown value -> ignored by statusEquals()
-        }
     }
 }

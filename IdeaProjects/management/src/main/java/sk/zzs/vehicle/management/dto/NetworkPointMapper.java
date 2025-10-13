@@ -3,6 +3,10 @@ package sk.zzs.vehicle.management.dto;
 import org.springframework.stereotype.Component;
 import sk.zzs.vehicle.management.entity.NetworkPoint;
 import sk.zzs.vehicle.management.entity.Provider;
+import sk.zzs.vehicle.management.entity.ProviderNetworkPointRegistration;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Component
 public class NetworkPointMapper {
@@ -10,18 +14,44 @@ public class NetworkPointMapper {
     public NetworkPointDto toDto(NetworkPoint networkPoint) {
         if (networkPoint == null) return null;
 
-        Long providerId = null;
-        String providerName = null;
+        Long ownerId = null;
+        String ownerName = null;
 
         try {
-            if (networkPoint.getProvider() != null) {
-                providerId = networkPoint.getProvider().getId();
-                providerName = networkPoint.getProvider().getName();
+            if (networkPoint.getOwner() != null) {
+                ownerId = networkPoint.getOwner().getId();
+                ownerName = networkPoint.getOwner().getName();
             }
         } catch (Exception e) {
-            // Handle cases where provider proxy cannot be initialized
-            providerId = null;
-            providerName = null;
+            ownerId = null;
+            ownerName = null;
+        }
+
+        // Map current provider from queue
+        Provider currentProvider = networkPoint.getCurrentProvider();
+        Long currentProviderId = null;
+        String currentProviderName = null;
+
+        if (currentProvider != null) {
+            try {
+                currentProviderId = currentProvider.getId();
+                currentProviderName = currentProvider.getName();
+            } catch (Exception e) {
+                currentProviderId = null;
+                currentProviderName = null;
+            }
+        }
+
+        // Map queue
+        List<ProviderNetworkPointRegistrationDto> queueDtos = null;
+        try {
+            if (networkPoint.getProviderQueue() != null) {
+                queueDtos = networkPoint.getProviderQueue().stream()
+                        .map(this::toRegistrationDto)
+                        .collect(Collectors.toList());
+            }
+        } catch (Exception e) {
+            queueDtos = null;
         }
 
         return NetworkPointDto.builder()
@@ -31,8 +61,35 @@ public class NetworkPointMapper {
                 .type(networkPoint.getType())
                 .validFrom(networkPoint.getValidFrom())
                 .validTo(networkPoint.getValidTo())
-                .providerId(providerId)
+                .providerId(ownerId)
+                .providerName(ownerName)
+                .currentProviderId(currentProviderId)
+                .currentProviderName(currentProviderName)
+                .providerQueue(queueDtos)
+                .build();
+    }
+
+    private ProviderNetworkPointRegistrationDto toRegistrationDto(ProviderNetworkPointRegistration reg) {
+        if (reg == null) return null;
+
+        String providerName = null;
+        try {
+            if (reg.getProvider() != null) {
+                providerName = reg.getProvider().getName();
+            }
+        } catch (Exception e) {
+            providerName = null;
+        }
+
+        return ProviderNetworkPointRegistrationDto.builder()
+                .id(reg.getId())
+                .networkPointId(reg.getNetworkPoint() != null ? reg.getNetworkPoint().getId() : null)
+                .providerId(reg.getProvider() != null ? reg.getProvider().getId() : null)
                 .providerName(providerName)
+                .registrationStartDate(reg.getRegistrationStartDate())
+                .registrationEndDate(reg.getRegistrationEndDate())
+                .queuePosition(reg.getQueuePosition())
+                .current(reg.isCurrent())
                 .build();
     }
 

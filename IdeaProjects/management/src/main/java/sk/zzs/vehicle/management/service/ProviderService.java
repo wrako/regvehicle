@@ -7,8 +7,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.server.ResponseStatusException;
 import sk.zzs.vehicle.management.dto.ProviderDto;
 import sk.zzs.vehicle.management.dto.ProviderMapper;
@@ -23,12 +21,17 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @Service
 @Transactional
 public class ProviderService {
+
+    private static final String STATE_ACTIVE = "ACTIVE";
+    private static final String STATE_DISABLED = "DISABLED";
+    private static final String STATE_UNBALANCED = "UNBALANCED";
     @Autowired
     private ProviderRepository providerRepository;
 
@@ -44,6 +47,14 @@ public class ProviderService {
     @Autowired
     @Lazy
     private VehicleService vehicleService;
+
+    @Autowired
+    @Lazy
+    private NetworkPointQueueService queueService;
+
+    @Autowired
+    @Lazy
+    private NetworkPointService networkPointService;
 
     @Transactional(readOnly = true)
     public List<ProviderDto> getAllProviders() {
@@ -62,7 +73,11 @@ public class ProviderService {
 
     public ProviderDto createProvider(ProviderDto dto) {
         Provider entity = providerMapper.toEntity(dto);
+        entity.setState(determineState(
+                entity.getVehicles() != null ? entity.getVehicles().size() : 0,
+                entity.getNetworkPoints() != null ? entity.getNetworkPoints().size() : 0));
         Provider saved = providerRepository.save(entity);
+        refreshStateForProvider(saved.getId());
         return providerMapper.toDto(saved);
     }
 
@@ -72,6 +87,7 @@ public class ProviderService {
 
         providerMapper.copyToEntity(dto, entity);
         Provider saved = providerRepository.save(entity);
+        refreshStateForProvider(saved.getId());
         return providerMapper.toDto(saved);
     }
 
@@ -115,26 +131,32 @@ public class ProviderService {
         Provider existing = providerRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Provider not found: " + id));
 
-        List<Vehicle> vehicles =
-            existing.getVehicles();
+        // Archive all vehicles owned by this provider
+        List<Vehicle> vehicles = existing.getVehicles();
         for (Vehicle vehicle : vehicles) {
             if (!vehicle.isArchived()) {
                 vehicleService.archiveVehicle(
                     vehicle.getId(),
-                    "Provider archived: " + (reason != null ? reason : ""),
-                    vehicle.getStatus()
+                    "Provider archived: " + (reason != null ? reason : "")
                 );
             }
         }
 
-        List<NetworkPoint> networkPoints =
-            existing.getNetworkPoints();
-        for (NetworkPoint np : networkPoints) {
+        // Remove provider from all NetworkPoint queues
+        // This will promote next in queue or archive NetworkPoint if queue becomes empty
+        queueService.removeProviderFromAllQueues(id);
+
+        // Clear owner relationship on owned NetworkPoints (metadata only)
+        List<NetworkPoint> ownedNetworkPoints = existing.getNetworkPoints();
+        for (NetworkPoint np : ownedNetworkPoints) {
             if (!np.isArchived()) {
-                np.setProvider(null);
+                np.setOwner(null);
             }
         }
+
         existing.setArchived(true);
+        existing.setState(STATE_DISABLED);
+        providerRepository.save(existing);
         return providerMapper.toDto(existing);
     }
 
@@ -142,7 +164,7 @@ public class ProviderService {
         int updated = providerRepository.unarchiveById(id);
         if (updated == 0) throw new ResponseStatusException(NOT_FOUND, "Provider not found: " + id);
 
-
+        refreshStateForProvider(id);
         return true;
     }
 
@@ -157,5 +179,38 @@ public class ProviderService {
                         new ResponseStatusException(HttpStatus.NOT_FOUND, "Archived provider not found: " + id));
     }
 
+    public void refreshStateForProvider(Long providerId) {
+        if (providerId == null) {
+            return;
+        }
+
+        providerRepository.findByIdIncludingArchived(providerId).ifPresent(provider -> {
+            String state = determineState(
+                    vehicleRepository.countByProviderId(providerId),
+                    networkPointRepository.countByProviderId(providerId));
+            if (!Objects.equals(state, provider.getState())) {
+                provider.setState(state);
+                providerRepository.save(provider);
+            } else if (provider.getState() == null) {
+                provider.setState(state);
+                providerRepository.save(provider);
+            }
+        });
+    }
+
+    private String determineState(long vehicleCount, long networkPointCount) {
+        if (vehicleCount == 0 && networkPointCount == 0) {
+            return STATE_DISABLED;
+        }
+
+        if (networkPointCount > 0) {
+            long requiredVehicles = (long) Math.ceil(networkPointCount * 1.3d);
+            if (vehicleCount < requiredVehicles) {
+                return STATE_UNBALANCED;
+            }
+        }
+
+        return STATE_ACTIVE;
+    }
 
 }

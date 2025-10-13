@@ -13,6 +13,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { FileText, CalendarIcon } from "lucide-react";
 import { API_BASE } from "@/constants/api";
+import { editVehicle } from "@/lib/api";
 import { fileNameFromPath } from "@/utils/stringHelpers";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -27,35 +28,12 @@ export interface EditInitial {
     firstRegistrationDate: Date | null;
     lastTechnicalCheckDate: Date | null;
     technicalCheckValidUntil: Date | null;
-    status:
-        | "aktívne"
-        | "rezerva"
-        | "vyradené"
-        | "dočasne vyradené"
-        | "preregistrované";
     providerId: string;
     providerAssignmentStartDate: Date | null;
     providerAssignmentEndDate: Date | null;
     avlDeviceId: string;
     rdstDeviceId: string;
     filePaths?: string[];
-}
-
-function mapStatusToApi(ui: EditInitial["status"]): string {
-    switch (ui) {
-        case "aktívne":
-            return "ACTIVE";
-        case "rezerva":
-            return "RESERVE";
-        case "vyradené":
-            return "DEREGISTERED";
-        case "dočasne vyradené":
-            return "TEMP_DEREGISTERED";
-        case "preregistrované":
-            return "PREREGISTERED";
-        default:
-            return "ACTIVE";
-    }
 }
 
 export function EditVehicleForm({
@@ -78,7 +56,6 @@ export function EditVehicleForm({
     const onSubmit = async (values: EditInitial) => {
         const payload = {
             ...values,
-            status: mapStatusToApi(values.status),
             firstRegistrationDate: toApiDate(values.firstRegistrationDate ?? undefined),
             lastTechnicalCheckDate: toApiDate(values.lastTechnicalCheckDate ?? undefined),
             technicalCheckValidUntil: toApiDate(values.technicalCheckValidUntil ?? undefined),
@@ -86,12 +63,7 @@ export function EditVehicleForm({
             providerAssignmentEndDate: toApiDate(values.providerAssignmentEndDate ?? undefined),
         };
         try {
-            const res = await fetch(`${API_BASE}/vehicles/${vehicleId}/edit`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
-            });
-            if (!res.ok) throw new Error(await res.text());
+            await editVehicle(vehicleId, payload);
 
             toast({
                 title: "Úspech",
@@ -99,9 +71,11 @@ export function EditVehicleForm({
             });
         } catch (err: any) {
             console.error(err);
+            // Show the error message directly in the title for better visibility
+            const errorMessage = err?.message ?? "Upravovanie vozidla zlyhalo.";
             toast({
-                title: "Chyba",
-                description: "Upravovanie vozidla zlyhalo.",
+                title: errorMessage.length > 100 ? "Chyba" : errorMessage,
+                description: errorMessage.length > 100 ? errorMessage : undefined,
                 variant: "destructive",
             });
         }
@@ -179,29 +153,6 @@ export function EditVehicleForm({
             {renderDatePicker("lastTechnicalCheckDate", "Posledná technická kontrola")}
 
             {renderDatePicker("technicalCheckValidUntil", "Platnosť STK", true)}
-
-            <div>
-                <label className="block text-sm font-medium mb-1">Status *</label>
-                <Controller
-                    control={control}
-                    name="status"
-                    render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Vyber status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="aktívne">Aktívne</SelectItem>
-                                <SelectItem value="rezerva">Rezerva</SelectItem>
-                                <SelectItem value="vyradené">Vyradené</SelectItem>
-                                <SelectItem value="dočasne vyradené">Dočasne vyradené</SelectItem>
-                                <SelectItem value="preregistrované">Preregistrované</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    )}
-                />
-            </div>
-
 
             {/*<div>*/}
             {/*    <label className="block text-sm font-medium mb-1">AVL zariadenie</label>*/}

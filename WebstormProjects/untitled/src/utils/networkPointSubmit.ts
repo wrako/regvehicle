@@ -6,36 +6,47 @@ type NetworkPointFormValues = {
     code: string;
     name: string;
     type: "RLP" | "RV" | "RZP" | "OTHER";
-    validFrom?: Date | null;
+    // validFrom removed - auto-set to TODAY on backend
     validTo?: Date | null;
-    providerId: number;
+    // providerId removed from CREATE - only ONE provider (queueProviderId)
+    queueProviderId?: number | null; // REQUIRED on create - EXACTLY ONE provider
+    providerRegistrationEndDate?: Date | null; // REQUIRED on create
 };
 
 export async function submitNetworkPoint(
     values: NetworkPointFormValues,
-    toast: (config: any) => void
+    toast: (config: any) => void,
+    bypassCapacityCheck: boolean = false
 ): Promise<boolean> {
-    const capacity = await checkProviderCapacity(values.providerId);
-    if (!capacity.ok) {
-        toast({
-            title: "Nedá sa pridať bod siete",
-            description: `Provider has only ${capacity.have} vehicles but must have ${capacity.required} vehicles.`,
-            variant: "destructive",
-        });
-        return false;
+    // Check capacity only if queue provider is being added AND not bypassed
+    if (values.queueProviderId && !bypassCapacityCheck) {
+        const capacity = await checkProviderCapacity(values.queueProviderId);
+        if (!capacity.ok) {
+            toast({
+                title: "Nedá sa pridať bod siete",
+                description: `Provider has only ${capacity.have} vehicles but must have ${capacity.required} vehicles.`,
+                variant: "destructive",
+            });
+            return false;
+        }
     }
 
     const payload = {
         code: values.code,
         name: values.name,
         type: values.type,
-        validFrom: toApiDate(values.validFrom) ?? null,
+        // validFrom removed - auto-set to TODAY on backend
         validTo: toApiDate(values.validTo) ?? null,
-        providerId: values.providerId,
+        // providerId removed from CREATE - backend will handle owner if needed
+        queueProviderId: values.queueProviderId, // REQUIRED - EXACTLY ONE provider
+        providerRegistrationEndDate: toApiDate(values.providerRegistrationEndDate), // REQUIRED
     };
 
     try {
-        const res = await fetch(`${API_BASE}/network-points`, {
+        const url = new URL(`${API_BASE}/network-points`);
+        url.searchParams.set("bypassCapacityCheck", String(bypassCapacityCheck));
+
+        const res = await fetch(url.toString(), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),

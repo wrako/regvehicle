@@ -11,7 +11,6 @@ export const vehicleFormSchema = z.object({
     firstRegistrationDate: z.date().optional(),
     lastTechnicalCheckDate: z.date().optional(),
     technicalCheckValidUntil: z.date({ required_error: "Platnosť STK je povinná" }),
-    status: z.enum(["aktívne", "rezerva", "vyradené", "dočasne vyradené", "preregistrované"]),
     providerId: z.string().min(1, "Vyberte poskytovateľa"),
     providerAssignmentEndDate: z.date({ required_error: "Dátum ukončenia pridelenia poskytovateľa je povinný" })
         .refine((date) => {
@@ -32,7 +31,6 @@ export const defaultVehicleFormValues: VehicleFormValues = {
     firstRegistrationDate: undefined,
     lastTechnicalCheckDate: undefined,
     technicalCheckValidUntil: undefined as any,
-    status: "aktívne",
     providerId: "",
     providerAssignmentEndDate: undefined as any,
     files: undefined,

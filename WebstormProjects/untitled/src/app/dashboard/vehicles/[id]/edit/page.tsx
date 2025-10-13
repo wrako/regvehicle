@@ -12,16 +12,6 @@ import {
 import { API_BASE } from "@/constants/api";
 import { fromApiDate } from "@/lib/date";
 
-function mapStatusToUi(s: any): EditInitial["status"] {
-    const v = String(s || "").toUpperCase();
-    if (v === "ACTIVE") return "aktívne";
-    if (v === "RESERVE") return "rezerva";
-    if (v === "DEREGISTERED") return "vyradené";
-    if (v === "TEMP_DEREGISTERED") return "dočasne vyradené";
-    if (v === "PREREGISTERED") return "preregistrované";
-    return "aktívne";
-}
-
 function normaliseToInitial(api: any): EditInitial {
     return {
         licensePlate: api.licensePlate ?? api.spz ?? "",
@@ -32,7 +22,6 @@ function normaliseToInitial(api: any): EditInitial {
         firstRegistrationDate: fromApiDate(api.firstRegistrationDate ?? api.firstRegistration) ?? null,
         lastTechnicalCheckDate: fromApiDate(api.lastTechnicalCheckDate ?? api.lastDateSTK) ?? null,
         technicalCheckValidUntil: fromApiDate(api.technicalCheckValidUntil ?? api.expiryDateSTK) ?? null,
-        status: mapStatusToUi(api.status),
         providerId: String(api.providerId ?? api.provider?.id ?? ""),
         providerAssignmentStartDate: fromApiDate(api.providerAssignmentStartDate) ?? null,
         providerAssignmentEndDate: fromApiDate(api.providerAssignmentEndDate) ?? null,

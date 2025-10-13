@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.Where;
-import sk.zzs.vehicle.management.enumer.VehicleStatus;
 import sk.zzs.vehicle.management.listener.VehicleListener;
 
 import java.time.LocalDate;
@@ -47,10 +46,6 @@ public class Vehicle {
     private LocalDate lastTechnicalCheckDate;
 
     private LocalDate technicalCheckValidUntil;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private VehicleStatus status;
 
     // relations
     @ManyToOne(fetch = FetchType.LAZY)

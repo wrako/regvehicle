@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { EditNetworkPointHeader } from "@/components/dashboard/network-point-form/EditNetworkPointHeader";
 import { EditNetworkPointForm } from "@/components/dashboard/network-point-form/EditNetworkPointForm";
+import { ProviderQueue } from "@/components/dashboard/provider-queue";
 import { useNetworkPointEdit } from "@/hooks/useNetworkPointEdit";
 import { networkPointEditSchema, NetworkPointEditFormData } from "@/utils/networkPointSchema";
 
@@ -21,13 +22,13 @@ export default function EditNetworkPointPage() {
             code: "",
             name: "",
             type: "RLP",
-            validFrom: null,
-            validTo: null,
-            providerId: 0,
+            // validFrom removed - managed via queue start dates
+            validTo: undefined as any,
+            // providerId removed - system auto-sets owner based on queue
         },
     });
 
-    const { loading, submitting, providers, onSubmit } = useNetworkPointEdit({ id, form, toast });
+    const { loading, submitting, providers, networkPointData, onSubmit, reloadQueue } = useNetworkPointEdit({ id, form, toast });
 
     if (loading) {
         return <div>Loading...</div>;
@@ -51,6 +52,15 @@ export default function EditNetworkPointPage() {
                     />
                 </CardContent>
             </Card>
+
+            {networkPointData && (
+                <ProviderQueue
+                    networkPointId={id}
+                    queue={networkPointData.providerQueue || []}
+                    providers={providers}
+                    onUpdate={reloadQueue}
+                />
+            )}
         </div>
     );
 }

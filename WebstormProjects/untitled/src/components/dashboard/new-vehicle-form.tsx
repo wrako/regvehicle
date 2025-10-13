@@ -8,7 +8,7 @@ import { Form } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { createVehicle, getProviders } from "@/lib/api";
+import { getProviders } from "@/lib/api";
 import { uploadVehicleFiles } from "@/utils";
 import { buildVehiclePayload, submitVehicle } from "@/utils/vehicleFormSubmit";
 import { useLicensePlateValidation } from "@/hooks/useLicensePlateValidation";
@@ -17,7 +17,6 @@ import {
     VehicleDateFields,
     VehicleStatusFields,
     VehicleFileUpload,
-    VinConfirmationDialog,
     vehicleFormSchema,
     defaultVehicleFormValues,
     VehicleFormValues,
@@ -34,9 +33,6 @@ export function NewVehicleForm({ vehicleId, vehicle, onSuccess }: Props) {
     const router = useRouter();
 
     const [providerOptions, setProviderOptions] = useState<any[]>([]);
-    const [confirmReRegOpen, setConfirmReRegOpen] = useState(false);
-    const [pendingPayload, setPendingPayload] = useState<any | null>(null);
-    const [submitting, setSubmitting] = useState(false);
 
     const form = useForm<VehicleFormValues>({
         resolver: zodResolver(vehicleFormSchema),
@@ -63,11 +59,6 @@ export function NewVehicleForm({ vehicleId, vehicle, onSuccess }: Props) {
 
         try {
             const result = await submitVehicle(payload, edit, vehicleId);
-            if ((result as any)?.needsConfirmation) {
-                setPendingPayload((result as any).payload);
-                setConfirmReRegOpen(true);
-                return;
-            }
 
             toast({ title: edit ? "Vozidlo aktualizované" : "Vozidlo zaregistrované" });
 
@@ -79,7 +70,13 @@ export function NewVehicleForm({ vehicleId, vehicle, onSuccess }: Props) {
 
             onSuccess ? onSuccess() : router.push("/dashboard");
         } catch (e: any) {
-            toast({ title: "Chyba pri ukladaní", description: e?.message ?? "Skúste znova neskôr.", variant: "destructive" });
+            // Show the error message directly in the title for better visibility
+            const errorMessage = e?.message ?? "Skúste znova neskôr.";
+            toast({
+                title: errorMessage.length > 100 ? "Chyba pri ukladaní" : errorMessage,
+                description: errorMessage.length > 100 ? errorMessage : undefined,
+                variant: "destructive"
+            });
         }
     }
 
@@ -110,38 +107,6 @@ export function NewVehicleForm({ vehicleId, vehicle, onSuccess }: Props) {
                     <Button type="submit">{edit ? "Uložiť zmeny" : "Zaregistrovať vozidlo"}</Button>
                 </div>
             </form>
-
-            <VinConfirmationDialog
-                open={confirmReRegOpen}
-                onOpenChange={setConfirmReRegOpen}
-                onConfirm={async () => {
-                    if (!pendingPayload) return;
-                    try {
-                        setSubmitting(true);
-                        const saved = await createVehicle(pendingPayload);
-                        toast({ title: "Vozidlo zaregistrované" });
-
-                        const newId: number | undefined = Number(saved?.id) || Number(saved?.data?.id);
-                        if (Number.isFinite(newId)) {
-                            const files = form.getValues("files") as FileList | undefined;
-                            await uploadVehicleFiles(newId!, files);
-                        }
-                        onSuccess ? onSuccess() : router.push("/dashboard");
-                    } catch (e: any) {
-                        toast({ title: "Chyba pri preregistrácii", description: e?.message ?? "Skúste znova neskôr.", variant: "destructive" });
-                    } finally {
-                        setSubmitting(false);
-                        setConfirmReRegOpen(false);
-                        setPendingPayload(null);
-                    }
-                }}
-                onCancel={() => {
-                    setConfirmReRegOpen(false);
-                    setPendingPayload(null);
-                    setSubmitting(false);
-                }}
-                submitting={submitting}
-            />
         </Form>
     );
 }

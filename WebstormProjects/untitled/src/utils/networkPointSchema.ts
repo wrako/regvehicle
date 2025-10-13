@@ -6,9 +6,9 @@ export const networkPointEditSchema = z.object({
     type: z.enum(["RLP", "RV", "RZP", "OTHER"] as const, {
         required_error: "Type is required",
     }),
-    validFrom: z.date().optional().nullable(),
-    validTo: z.date().optional().nullable(),
-    providerId: z.number().min(1, "Provider is required"),
+    // validFrom removed - managed via queue start dates
+    validTo: z.date({ required_error: "Valid To date is required" }),
+    // providerId removed - system auto-sets owner based on current provider in queue
 });
 
 export type NetworkPointEditFormData = z.infer<typeof networkPointEditSchema>;

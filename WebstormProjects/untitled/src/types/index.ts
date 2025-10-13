@@ -1,6 +1,3 @@
-export type VehicleStatus = 'aktívne' | 'rezerva' | 'vyradené' | 'dočasne vyradené' | 'preregistrované';
-
-
 export interface Vehicle {
     id: string;
     spz: string;
@@ -13,7 +10,6 @@ export interface Vehicle {
     networkPoint: string;       // stores ID
     networkPointLabel: string;  // name from backend
 
-    status: VehicleStatus;
     stkDate: Date | null;
     firstRegistration: Date | null;
 
@@ -51,6 +47,17 @@ export type NetworkPoint = {
     validTo?: Date;
 }
 
+export type ProviderNetworkPointRegistrationDto = {
+    id?: number;
+    networkPointId?: number;
+    providerId?: number;
+    providerName?: string;
+    registrationStartDate?: string;
+    registrationEndDate?: string;
+    queuePosition?: number;
+    current?: boolean;
+}
+
 export type NetworkPointDto = {
     id?: number;
     code: string;
@@ -58,8 +65,21 @@ export type NetworkPointDto = {
     type: NetworkPointType;
     validFrom?: string;
     validTo?: string;
-    providerId: number;
+
+    // Owner (metadata only)
+    providerId?: number;
     providerName?: string;
+
+    // Queue fields for CREATE/EDIT
+    queueProviderId?: number;
+    providerRegistrationEndDate?: string;
+
+    // Current provider from queue (position 0)
+    currentProviderId?: number;
+    currentProviderName?: string;
+
+    // Full queue for display
+    providerQueue?: ProviderNetworkPointRegistrationDto[];
 }
 
 export type RdstDevice = {
@@ -73,4 +93,28 @@ export type AvlDevice = {
     model: string;
     communicationId: string;
     additionalAttributes?: string;
+}
+
+export type VehicleLogDto = {
+    id: number;
+    vehicleId: number;
+    licensePlate?: string;
+    vinNum?: string;
+    brand?: string;
+    model?: string;
+    firstRegistrationDate?: string;
+    lastTechnicalCheckDate?: string;
+    technicalCheckValidUntil?: string;
+    providerId?: number;
+    providerName?: string;
+    author: string;
+    timestamp: string;
+    timestampFormatted?: string;
+    operation: string;
+}
+
+export type VehicleLogBlockDto = {
+    providerId?: number;
+    providerName: string;
+    logs: VehicleLogDto[];
 }

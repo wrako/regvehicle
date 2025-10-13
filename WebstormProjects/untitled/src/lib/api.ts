@@ -35,6 +35,44 @@ function ensureOk(res: Response) {
     return res;
 }
 
+async function handleVehicleError(res: Response) {
+    if (!res.ok) {
+        // Clone the response so we can read it multiple times
+        const resClone = res.clone();
+        let backendMessage = "";
+
+        // Try to get error message from response body
+        try {
+            const text = await resClone.text();
+            if (text) {
+                backendMessage = text;
+            }
+        } catch (e) {
+            // Ignore parsing errors
+        }
+
+        // Translate backend error messages to Slovak based on status and content
+        if (res.status === 409) {
+            // Check if it's a VIN duplicate error
+            if (backendMessage.toLowerCase().includes("vin")) {
+                throw new Error("Vozidlo s týmto VIN číslom už existuje (aktívne alebo archivované). Nemožno registrovať duplicitný VIN.");
+            }
+            // Check if it's a license plate duplicate error
+            else if (backendMessage.toLowerCase().includes("license") || backendMessage.toLowerCase().includes("plate") || backendMessage.toLowerCase().includes("spz")) {
+                throw new Error("Vozidlo s touto ŠPZ už existuje (aktívne alebo archivované). Nemožno registrovať duplicitnú ŠPZ.");
+            }
+            // Generic 409 conflict error
+            else {
+                throw new Error("Vozidlo s týmito údajmi už existuje. Nemožno vytvoriť duplicitný záznam.");
+            }
+        }
+
+        // For other errors, show backend message or generic error
+        throw new Error(backendMessage || `Chyba: ${res.status} ${res.statusText}`);
+    }
+    return res;
+}
+
 export async function listArchivedVehicles(params: {
     page?: number;
     size?: number;
@@ -157,8 +195,14 @@ export async function archiveNetworkPoint(id: number, params?: { reason?: string
     return await res.json();
 }
 
-export async function unarchiveNetworkPoint(id: number) {
-    const res = await fetch(`${API_BASE}/network-points/${id}/unarchive`, {
+export async function unarchiveNetworkPoint(id: number, providerId: number, providerEndDate: string, npValidTo: string, bypassCapacityCheck: boolean = false) {
+    const url = new URL(`${API_BASE}/network-points/${id}/unarchive`);
+    url.searchParams.set("providerId", String(providerId));
+    url.searchParams.set("providerRegistrationEndDate", providerEndDate);
+    url.searchParams.set("networkPointValidTo", npValidTo);
+    url.searchParams.set("bypassCapacityCheck", String(bypassCapacityCheck));
+
+    const res = await fetch(url.toString(), {
         method: "POST",
         credentials: "include",
     });
@@ -308,12 +352,94 @@ export async function createVehicle(data: any) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
     });
-    ensureOk(res);
+    await handleVehicleError(res);
     return await res.json();
 }
 
 export async function editVehicle(id: string, data: any) {
     const res = await fetch(`${API_BASE}/vehicles/${id}/edit`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+    });
+    await handleVehicleError(res);
+    return await res.json();
+}
+
+// NetworkPoint Queue API functions
+export async function getNetworkPointQueue(networkPointId: number) {
+    const res = await fetch(`${API_BASE}/network-points/${networkPointId}/queue`, {
+        method: "GET",
+        credentials: "include",
+    });
+    ensureOk(res);
+    return await res.json();
+}
+
+export async function addProviderToQueue(networkPointId: number, providerId: number, endDate: string) {
+    const url = new URL(`${API_BASE}/network-points/${networkPointId}/queue`);
+    url.searchParams.set("providerId", String(providerId));
+    url.searchParams.set("endDate", endDate);
+
+    const res = await fetch(url.toString(), {
+        method: "POST",
+        credentials: "include",
+    });
+    ensureOk(res);
+}
+
+export async function removeFromQueue(networkPointId: number, registrationId: number) {
+    const res = await fetch(`${API_BASE}/network-points/${networkPointId}/queue/${registrationId}`, {
+        method: "DELETE",
+        credentials: "include",
+    });
+    ensureOk(res);
+}
+
+export async function promoteNext(networkPointId: number) {
+    const res = await fetch(`${API_BASE}/network-points/${networkPointId}/queue/promote-next`, {
+        method: "POST",
+        credentials: "include",
+    });
+    ensureOk(res);
+}
+
+export async function clearQueue(networkPointId: number) {
+    const res = await fetch(`${API_BASE}/network-points/${networkPointId}/queue`, {
+        method: "DELETE",
+        credentials: "include",
+    });
+    ensureOk(res);
+}
+
+export async function updateRegistrationDates(networkPointId: number, registrationId: number, startDate?: string, endDate?: string) {
+    const url = new URL(`${API_BASE}/network-points/${networkPointId}/queue/${registrationId}`);
+    if (startDate) url.searchParams.set("startDate", startDate);
+    if (endDate) url.searchParams.set("endDate", endDate);
+
+    const res = await fetch(url.toString(), {
+        method: "PUT",
+        credentials: "include",
+    });
+    ensureOk(res);
+}
+
+export async function reorderQueue(networkPointId: number, registrationIds: number[]) {
+    const res = await fetch(`${API_BASE}/network-points/${networkPointId}/queue/reorder`, {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(registrationIds),
+    });
+    ensureOk(res);
+}
+
+export async function createNetworkPoint(data: any, bypassCapacityCheck: boolean = false) {
+    const url = new URL(`${API_BASE}/network-points`);
+    url.searchParams.set("bypassCapacityCheck", String(bypassCapacityCheck));
+
+    const res = await fetch(url.toString(), {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

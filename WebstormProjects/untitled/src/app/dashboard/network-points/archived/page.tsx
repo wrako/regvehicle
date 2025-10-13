@@ -17,6 +17,7 @@ import { API_BASE } from "@/constants/api";
 import { MoreHorizontal, ArchiveRestore } from "lucide-react";
 import { cancellableFetch } from "@/utils/fetchUtils";
 import { formatDate } from "@/lib/date";
+import { UnarchiveNetworkPointDialog } from "@/components/dashboard/unarchive-network-point-dialog";
 
 type NetworkPointType = "RLP" | "RV" | "RZP" | "OTHER";
 type NetworkPoint = {
@@ -40,6 +41,8 @@ export default function ArchivedNetworkPointsPage() {
     const [items, setItems] = useState<NetworkPoint[]>([]);
     const [loading, setLoading] = useState(false);
     const lastQueryKeyRef = useRef<string>("");
+    const [unarchiveDialogOpen, setUnarchiveDialogOpen] = useState(false);
+    const [selectedNetworkPoint, setSelectedNetworkPoint] = useState<NetworkPoint | null>(null);
 
     const queryParams = useMemo(() => {
         const params = new URLSearchParams();
@@ -91,34 +94,15 @@ export default function ArchivedNetworkPointsPage() {
         load();
     }, [load]);
 
-    async function handleUnarchive(id: number) {
-        if (!confirm("Are you sure you want to unarchive this network point?")) return;
-        try {
-            const res = await fetch(`${API_BASE}/network-points/${id}/unarchive`, { method: "POST" });
-            if (!res.ok) {
-                const errorText = await res.text();
-                if (res.status === 409) {
-                    toast({
-                        title: "Cannot unarchive network point",
-                        description: errorText,
-                        variant: "destructive"
-                    });
-                    return;
-                }
-                throw new Error(errorText);
-            }
-            toast({ title: "Network point unarchived successfully" });
-            // Reset ref to allow reload
-            lastQueryKeyRef.current = "";
-            await load();
-        } catch (e: any) {
-            console.error("Unarchive error:", e);
-            toast({
-                title: "Error unarchiving network point",
-                description: e?.message ?? "Please try again.",
-                variant: "destructive"
-            });
-        }
+    function handleUnarchive(point: NetworkPoint) {
+        setSelectedNetworkPoint(point);
+        setUnarchiveDialogOpen(true);
+    }
+
+    function handleUnarchiveSuccess() {
+        // Reset ref to allow reload
+        lastQueryKeyRef.current = "";
+        load();
     }
 
     return (
@@ -168,7 +152,7 @@ export default function ArchivedNetworkPointsPage() {
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                         <DropdownMenuItem
-                                                            onClick={() => handleUnarchive(point.id)}
+                                                            onClick={() => handleUnarchive(point)}
                                                         >
                                                             <ArchiveRestore className="mr-2 h-4 w-4" />
                                                             Unarchive
@@ -190,6 +174,14 @@ export default function ArchivedNetworkPointsPage() {
                     </div>
                 </CardContent>
             </Card>
+
+            <UnarchiveNetworkPointDialog
+                networkPointId={selectedNetworkPoint?.id || null}
+                networkPointName={selectedNetworkPoint?.name}
+                open={unarchiveDialogOpen}
+                onOpenChange={setUnarchiveDialogOpen}
+                onSuccess={handleUnarchiveSuccess}
+            />
         </div>
     );
 }

@@ -26,9 +26,12 @@ public class VehicleLog {
     private LocalDate firstRegistrationDate;
     private LocalDate lastTechnicalCheckDate;
     private LocalDate technicalCheckValidUntil;
-    private String status;
 
     private String certificateFilePath;
+
+    // Provider information at time of operation
+    private Long providerId;
+    private String providerName;
 
     // audit info
     private String author;
