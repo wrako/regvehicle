@@ -1,9 +1,23 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, History } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ArrowLeft, History, X, ChevronDown, Check } from "lucide-react";
 import Link from "next/link";
 import {
     Card,
@@ -25,7 +39,8 @@ import { Badge } from "@/components/ui/badge";
 import { OperationBadge, type OperationType } from "@/components/common";
 import { formatDate } from "@/lib/date";
 import { NetworkPointLogDto } from "@/types";
-import { getNetworkPointHistory } from "@/lib/api";
+import { getNetworkPointHistory, getProviders } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 function formatDateTime(value?: string | Date | null): string {
     if (!value) return "";
@@ -39,6 +54,138 @@ function formatDateTime(value?: string | Date | null): string {
     return timePart ? `${datePart} ${timePart}` : datePart;
 }
 
+// Helper to get local calendar date (YYYY-MM-DD) for comparison
+function getLocalDateString(date: Date | string | null | undefined): string {
+    if (!date) return "";
+    const d = typeof date === "string" ? new Date(date) : date;
+    if (!isValid(d)) return "";
+
+    // Get local date components
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+}
+
+const OPERATION_TYPES: OperationType[] = ["CREATE", "UPDATE", "DELETE", "ARCHIVE", "UNARCHIVE"];
+const NETWORK_POINT_TYPES = ["RLP", "RV", "RZP", "OTHER"];
+
+type ArchivedFilter = "any" | "yes" | "no";
+
+// Multi-Select Dropdown Component
+interface MultiSelectProps<T extends string> {
+    options: T[];
+    selected: T[];
+    onSelectedChange: (selected: T[]) => void;
+    placeholder?: string;
+    getLabel?: (value: T) => string;
+}
+
+function MultiSelectDropdown<T extends string>({
+    options,
+    selected,
+    onSelectedChange,
+    placeholder = "Select...",
+    getLabel = (v) => v,
+}: MultiSelectProps<T>) {
+    const [open, setOpen] = useState(false);
+
+    const handleToggle = (value: T) => {
+        const newSelected = selected.includes(value)
+            ? selected.filter((v) => v !== value)
+            : [...selected, value];
+        onSelectedChange(newSelected);
+    };
+
+    const handleClear = () => {
+        onSelectedChange([]);
+    };
+
+    const handleRemove = (value: T) => {
+        onSelectedChange(selected.filter((v) => v !== value));
+    };
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={open}
+                    className="w-full h-auto min-h-[28px] justify-between text-xs px-2 py-1"
+                >
+                    <div className="flex flex-col gap-1 flex-1 items-start">
+                        {selected.length === 0 ? (
+                            <span className="text-muted-foreground">{placeholder}</span>
+                        ) : (
+                            selected.map((value) => (
+                                <Badge
+                                    key={value}
+                                    variant="secondary"
+                                    className="text-xs px-1 py-0 h-5"
+                                >
+                                    {getLabel(value)}
+                                    <span
+                                        className="ml-1 hover:text-destructive cursor-pointer"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleRemove(value);
+                                        }}
+                                    >
+                                        <X className="h-3 w-3" />
+                                    </span>
+                                </Badge>
+                            ))
+                        )}
+                    </div>
+                    <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[200px] p-0" align="start">
+                <div className="p-2">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium">
+                            {selected.length} selected
+                        </span>
+                        {selected.length > 0 && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 text-xs"
+                                onClick={handleClear}
+                            >
+                                Clear all
+                            </Button>
+                        )}
+                    </div>
+                    <div className="space-y-1 max-h-[200px] overflow-y-auto">
+                        {options.map((option) => (
+                            <div
+                                key={option}
+                                className={cn(
+                                    "flex items-center space-x-2 rounded-sm px-2 py-1.5 cursor-pointer hover:bg-accent",
+                                    selected.includes(option) && "bg-accent"
+                                )}
+                                onClick={() => handleToggle(option)}
+                            >
+                                <Checkbox
+                                    checked={selected.includes(option)}
+                                    onCheckedChange={() => handleToggle(option)}
+                                />
+                                <span className="text-sm flex-1">{getLabel(option)}</span>
+                                {selected.includes(option) && (
+                                    <Check className="h-4 w-4" />
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </PopoverContent>
+        </Popover>
+    );
+}
+
 export default function NetworkPointHistoryPage() {
     const params = useParams();
     const id = typeof params.id === "string" ? params.id : "";
@@ -47,6 +194,19 @@ export default function NetworkPointHistoryPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const lastIdRef = useRef<string>("");
+    const [allProviders, setAllProviders] = useState<Array<{ id: number; name: string }>>([]);
+
+    // Typed filter state
+    const [timestampDate, setTimestampDate] = useState(""); // Single date (YYYY-MM-DD)
+    const [authorFilter, setAuthorFilter] = useState("");
+    const [operationFilters, setOperationFilters] = useState<OperationType[]>([]); // MULTI-SELECT
+    const [codeFilter, setCodeFilter] = useState("");
+    const [nameFilter, setNameFilter] = useState("");
+    const [typeFilters, setTypeFilters] = useState<string[]>([]); // MULTI-SELECT
+    const [validFromDate, setValidFromDate] = useState(""); // Single date
+    const [validToDate, setValidToDate] = useState(""); // Single date
+    const [providerFilters, setProviderFilters] = useState<string[]>([]); // MULTI-SELECT (changed from single)
+    const [archivedFilter, setArchivedFilter] = useState<ArchivedFilter>("any");
 
     useEffect(() => {
         if (!id) return;
@@ -59,8 +219,12 @@ export default function NetworkPointHistoryPage() {
 
         (async () => {
             try {
-                const data = await getNetworkPointHistory(id);
-                setLogs(data);
+                const [historyData, providersData] = await Promise.all([
+                    getNetworkPointHistory(id),
+                    getProviders()
+                ]);
+                setLogs(historyData);
+                setAllProviders(providersData);
             } catch (e: any) {
                 console.error(e);
                 setError("Nepodarilo sa načítať históriu sieťového bodu.");
@@ -69,6 +233,124 @@ export default function NetworkPointHistoryPage() {
             }
         })();
     }, [id]);
+
+    // Compute filtered logs with typed filters
+    const filteredLogs = useMemo(() => {
+        let result = logs;
+
+        // Timestamp - Single date filter (match calendar day)
+        if (timestampDate) {
+            result = result.filter((log) => {
+                const logDateStr = getLocalDateString(log.timestamp);
+                return logDateStr === timestampDate;
+            });
+        }
+
+        // Author filter (case-insensitive substring)
+        if (authorFilter.trim()) {
+            const query = authorFilter.toLowerCase();
+            result = result.filter((log) =>
+                (log.author || "").toLowerCase().includes(query)
+            );
+        }
+
+        // Operation filter (multi-select with IN logic)
+        if (operationFilters.length > 0) {
+            result = result.filter((log) =>
+                operationFilters.includes(log.operation as OperationType)
+            );
+        }
+
+        // Code filter (case-insensitive substring)
+        if (codeFilter.trim()) {
+            const query = codeFilter.toLowerCase();
+            result = result.filter((log) =>
+                (log.code || "").toLowerCase().includes(query)
+            );
+        }
+
+        // Name filter (case-insensitive substring)
+        if (nameFilter.trim()) {
+            const query = nameFilter.toLowerCase();
+            result = result.filter((log) =>
+                (log.name || "").toLowerCase().includes(query)
+            );
+        }
+
+        // Type filter (multi-select with IN logic)
+        if (typeFilters.length > 0) {
+            result = result.filter((log) => log.type && typeFilters.includes(log.type));
+        }
+
+        // ValidFrom - Single date filter (match calendar day)
+        if (validFromDate) {
+            result = result.filter((log) => {
+                const logDateStr = getLocalDateString(log.validFrom);
+                return logDateStr === validFromDate;
+            });
+        }
+
+        // ValidTo - Single date filter (match calendar day)
+        if (validToDate) {
+            result = result.filter((log) => {
+                const logDateStr = getLocalDateString(log.validTo);
+                return logDateStr === validToDate;
+            });
+        }
+
+        // Provider filter (multi-select with IN logic)
+        if (providerFilters.length > 0) {
+            result = result.filter((log) => {
+                const logProviderId = String(log.providerId);
+                return providerFilters.includes(logProviderId);
+            });
+        }
+
+        // Archived filter (tri-state: any/yes/no)
+        if (archivedFilter !== "any") {
+            const filterValue = archivedFilter === "yes";
+            result = result.filter((log) => log.archived === filterValue);
+        }
+
+        return result;
+    }, [
+        logs,
+        timestampDate,
+        authorFilter,
+        operationFilters,
+        codeFilter,
+        nameFilter,
+        typeFilters,
+        validFromDate,
+        validToDate,
+        providerFilters,
+        archivedFilter,
+    ]);
+
+    const handleClearAllFilters = () => {
+        setTimestampDate("");
+        setAuthorFilter("");
+        setOperationFilters([]);
+        setCodeFilter("");
+        setNameFilter("");
+        setTypeFilters([]);
+        setValidFromDate("");
+        setValidToDate("");
+        setProviderFilters([]);
+        setArchivedFilter("any");
+    };
+
+    const hasActiveFilters =
+        timestampDate !== "" ||
+        authorFilter.trim() !== "" ||
+        operationFilters.length > 0 ||
+        codeFilter.trim() !== "" ||
+        nameFilter.trim() !== "" ||
+        typeFilters.length > 0 ||
+        validFromDate !== "" ||
+        validToDate !== "" ||
+        providerFilters.length > 0 ||
+        archivedFilter !== "any";
 
     return (
         <div className="flex flex-col gap-6">
@@ -120,15 +402,31 @@ export default function NetworkPointHistoryPage() {
             ) : (
                 <Card>
                     <CardHeader>
-                        <CardTitle>Záznamy o zmenách</CardTitle>
-                        <CardDescription>
-                            Celkovo {logs.length} {logs.length === 1 ? "záznam" : logs.length < 5 ? "záznamy" : "záznamov"}
-                        </CardDescription>
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <CardTitle>Záznamy o zmenách</CardTitle>
+                                <CardDescription>
+                                    Zobrazuje sa {filteredLogs.length} z {logs.length}{" "}
+                                    {logs.length === 1 ? "záznamu" : logs.length < 5 ? "záznamov" : "záznamov"}
+                                </CardDescription>
+                            </div>
+                            {hasActiveFilters && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleClearAllFilters}
+                                >
+                                    <X className="mr-2 h-4 w-4" />
+                                    Vyčistiť filtre
+                                </Button>
+                            )}
+                        </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="rounded-md border">
+                        <div className="rounded-md border overflow-x-auto">
                             <Table>
                                 <TableHeader>
+                                    {/* Column Headers */}
                                     <TableRow>
                                         <TableHead>Dátum a čas</TableHead>
                                         <TableHead>Autor</TableHead>
@@ -141,44 +439,171 @@ export default function NetworkPointHistoryPage() {
                                         <TableHead className="hidden xl:table-cell">Poskytovateľ</TableHead>
                                         <TableHead className="hidden xl:table-cell">Archivované</TableHead>
                                     </TableRow>
+                                    {/* Typed Filter Row - Always Visible */}
+                                    <TableRow className="bg-muted/50">
+                                        {/* Dátum a čas - Single Date */}
+                                        <TableHead className="py-2">
+                                            <Input
+                                                type="date"
+                                                value={timestampDate}
+                                                onChange={(e) => setTimestampDate(e.target.value)}
+                                                className="h-7 text-xs"
+                                            />
+                                        </TableHead>
+                                        {/* Autor - Text */}
+                                        <TableHead className="py-2">
+                                            <Input
+                                                type="text"
+                                                placeholder="Filter..."
+                                                value={authorFilter}
+                                                onChange={(e) => setAuthorFilter(e.target.value)}
+                                                className="h-7 text-xs"
+                                            />
+                                        </TableHead>
+                                        {/* Operácia - MULTI-SELECT DROPDOWN */}
+                                        <TableHead className="py-2">
+                                            <MultiSelectDropdown
+                                                options={OPERATION_TYPES}
+                                                selected={operationFilters}
+                                                onSelectedChange={setOperationFilters}
+                                                placeholder="Any"
+                                            />
+                                        </TableHead>
+                                        {/* Kód - Text */}
+                                        <TableHead className="py-2">
+                                            <Input
+                                                type="text"
+                                                placeholder="Filter..."
+                                                value={codeFilter}
+                                                onChange={(e) => setCodeFilter(e.target.value)}
+                                                className="h-7 text-xs"
+                                            />
+                                        </TableHead>
+                                        {/* Názov - Text */}
+                                        <TableHead className="hidden md:table-cell py-2">
+                                            <Input
+                                                type="text"
+                                                placeholder="Filter..."
+                                                value={nameFilter}
+                                                onChange={(e) => setNameFilter(e.target.value)}
+                                                className="h-7 text-xs"
+                                            />
+                                        </TableHead>
+                                        {/* Typ - MULTI-SELECT DROPDOWN */}
+                                        <TableHead className="hidden lg:table-cell py-2">
+                                            <MultiSelectDropdown
+                                                options={NETWORK_POINT_TYPES}
+                                                selected={typeFilters}
+                                                onSelectedChange={setTypeFilters}
+                                                placeholder="Any"
+                                            />
+                                        </TableHead>
+                                        {/* Platnosť od - Single Date */}
+                                        <TableHead className="hidden lg:table-cell py-2">
+                                            <Input
+                                                type="date"
+                                                value={validFromDate}
+                                                onChange={(e) => setValidFromDate(e.target.value)}
+                                                className="h-7 text-xs"
+                                            />
+                                        </TableHead>
+                                        {/* Platnosť do - Single Date */}
+                                        <TableHead className="hidden xl:table-cell py-2">
+                                            <Input
+                                                type="date"
+                                                value={validToDate}
+                                                onChange={(e) => setValidToDate(e.target.value)}
+                                                className="h-7 text-xs"
+                                            />
+                                        </TableHead>
+                                        {/* Poskytovateľ - MULTI-SELECT DROPDOWN */}
+                                        <TableHead className="hidden xl:table-cell py-2">
+                                            <MultiSelectDropdown
+                                                options={allProviders.map((p) => String(p.id))}
+                                                selected={providerFilters}
+                                                onSelectedChange={setProviderFilters}
+                                                placeholder="Any"
+                                                getLabel={(id) => {
+                                                    const provider = allProviders.find((p) => String(p.id) === id);
+                                                    return provider?.name || id;
+                                                }}
+                                            />
+                                        </TableHead>
+                                        {/* Archivované - Tri-state */}
+                                        <TableHead className="hidden xl:table-cell py-2">
+                                            <Select
+                                                value={archivedFilter}
+                                                onValueChange={(value) =>
+                                                    setArchivedFilter(value as ArchivedFilter)
+                                                }
+                                            >
+                                                <SelectTrigger className="h-7 text-xs">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="any">Any</SelectItem>
+                                                    <SelectItem value="yes">Áno</SelectItem>
+                                                    <SelectItem value="no">Nie</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </TableHead>
+                                    </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {logs.map((log) => (
-                                        <TableRow key={log.id}>
-                                            <TableCell className="font-medium">
-                                                {formatDateTime(log.timestamp)}
-                                            </TableCell>
-                                            <TableCell>{log.author}</TableCell>
-                                            <TableCell>
-                                                <OperationBadge operation={log.operation as OperationType} />
-                                            </TableCell>
-                                            <TableCell>{log.code || "-"}</TableCell>
-                                            <TableCell className="hidden md:table-cell">
-                                                {log.name || "-"}
-                                            </TableCell>
-                                            <TableCell className="hidden lg:table-cell">
-                                                {log.type ? (
-                                                    <Badge variant="outline">{log.type}</Badge>
-                                                ) : "-"}
-                                            </TableCell>
-                                            <TableCell className="hidden lg:table-cell">
-                                                {formatDate(log.validFrom)}
-                                            </TableCell>
-                                            <TableCell className="hidden xl:table-cell">
-                                                {formatDate(log.validTo)}
-                                            </TableCell>
-                                            <TableCell className="hidden xl:table-cell">
-                                                {log.providerName || "-"}
-                                            </TableCell>
-                                            <TableCell className="hidden xl:table-cell">
-                                                {log.archived ? (
-                                                    <Badge variant="outline">Áno</Badge>
-                                                ) : (
-                                                    <Badge variant="secondary">Nie</Badge>
-                                                )}
+                                    {filteredLogs.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell
+                                                colSpan={10}
+                                                className="h-24 text-center text-muted-foreground"
+                                            >
+                                                <div>
+                                                    <p className="font-medium">
+                                                        Podľa aktuálnych filtrov sa nenašli žiadne záznamy.
+                                                    </p>
+                                                    <p className="text-sm mt-1">
+                                                        Skúste upraviť filtre alebo ich vyčistiť.
+                                                    </p>
+                                                </div>
                                             </TableCell>
                                         </TableRow>
-                                    ))}
+                                    ) : (
+                                        filteredLogs.map((log) => (
+                                            <TableRow key={log.id}>
+                                                <TableCell className="font-medium">
+                                                    {formatDateTime(log.timestamp)}
+                                                </TableCell>
+                                                <TableCell>{log.author}</TableCell>
+                                                <TableCell>
+                                                    <OperationBadge operation={log.operation as OperationType} />
+                                                </TableCell>
+                                                <TableCell>{log.code || "-"}</TableCell>
+                                                <TableCell className="hidden md:table-cell">
+                                                    {log.name || "-"}
+                                                </TableCell>
+                                                <TableCell className="hidden lg:table-cell">
+                                                    {log.type ? (
+                                                        <Badge variant="outline">{log.type}</Badge>
+                                                    ) : "-"}
+                                                </TableCell>
+                                                <TableCell className="hidden lg:table-cell">
+                                                    {formatDate(log.validFrom)}
+                                                </TableCell>
+                                                <TableCell className="hidden xl:table-cell">
+                                                    {formatDate(log.validTo)}
+                                                </TableCell>
+                                                <TableCell className="hidden xl:table-cell">
+                                                    {log.providerName || "-"}
+                                                </TableCell>
+                                                <TableCell className="hidden xl:table-cell">
+                                                    {log.archived ? (
+                                                        <Badge variant="outline">Áno</Badge>
+                                                    ) : (
+                                                        <Badge variant="secondary">Nie</Badge>
+                                                    )}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    )}
                                 </TableBody>
                             </Table>
                         </div>
