@@ -307,6 +307,30 @@ export async function getArchivedProvider(id: number) {
     return await res.json();
 }
 
+export async function getProviderHistory(id: number | string) {
+    const res = await fetch(`${API_BASE}/provider-logs/history/${id}`, {
+        method: "GET",
+        credentials: "include",
+        cache: "no-store",
+    });
+    if (!res.ok) {
+        throw new Error("Failed to load provider history");
+    }
+    return await res.json();
+}
+
+export async function getNetworkPointHistory(id: number | string) {
+    const res = await fetch(`${API_BASE}/network-point-logs/history/${id}`, {
+        method: "GET",
+        credentials: "include",
+        cache: "no-store",
+    });
+    if (!res.ok) {
+        throw new Error("Failed to load network point history");
+    }
+    return await res.json();
+}
+
 // Legacy API functions (needed by existing components)
 export async function getProviders() {
     const res = await fetch(`${API_BASE}/providers`, {

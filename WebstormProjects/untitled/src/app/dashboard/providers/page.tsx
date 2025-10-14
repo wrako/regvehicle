@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, MoreHorizontal, Building, Trash2, Edit, Archive, CheckCircle } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Building, Trash2, Edit, Archive, CheckCircle, History } from "lucide-react";
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -271,6 +271,12 @@ export default function ProvidersPage() {
                                                             <Link href={`/dashboard/providers/${p.id}/edit`}>
                                                                 <Edit className="mr-2 h-4 w-4" />
                                                                 Edit
+                                                            </Link>
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem asChild>
+                                                            <Link href={`/dashboard/providers/${p.id}/history`}>
+                                                                <History className="mr-2 h-4 w-4" />
+                                                                História
                                                             </Link>
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem

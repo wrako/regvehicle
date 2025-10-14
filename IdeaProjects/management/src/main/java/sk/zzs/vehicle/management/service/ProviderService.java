@@ -12,11 +12,16 @@ import sk.zzs.vehicle.management.dto.ProviderDto;
 import sk.zzs.vehicle.management.dto.ProviderMapper;
 import sk.zzs.vehicle.management.entity.NetworkPoint;
 import sk.zzs.vehicle.management.entity.Provider;
+import sk.zzs.vehicle.management.entity.ProviderLog;
 import sk.zzs.vehicle.management.entity.Vehicle;
+import sk.zzs.vehicle.management.enumer.OperationType;
+import sk.zzs.vehicle.management.repository.ProviderLogRepository;
 import sk.zzs.vehicle.management.repository.ProviderRepository;
 import sk.zzs.vehicle.management.repository.VehicleRepository;
 import sk.zzs.vehicle.management.repository.NetworkPointRepository;
+import sk.zzs.vehicle.management.util.CurrentUserProvider;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -40,6 +45,9 @@ public class ProviderService {
 
     @Autowired
     private NetworkPointRepository networkPointRepository;
+
+    @Autowired
+    private ProviderLogRepository providerLogRepository;
 
     @Autowired
     private ProviderMapper providerMapper;
@@ -127,6 +135,25 @@ public class ProviderService {
         return networkPointRepository.countByProviderId(id);
     }
 
+    /**
+     * Manually create a log entry for operations not captured by entity listeners (ARCHIVE, UNARCHIVE)
+     */
+    private void createManualLog(Provider provider, OperationType operation) {
+        ProviderLog log = new ProviderLog();
+        log.setProviderId(provider.getId());
+        log.setName(provider.getName());
+        log.setEmail(provider.getEmail());
+        log.setProviderIdField(provider.getProviderId());
+        log.setAddress(provider.getAddress());
+        log.setState(provider.getState());
+        log.setArchived(provider.isArchived());
+
+        log.setAuthor(CurrentUserProvider.getUsernameOrSystem());
+        log.setTimestamp(LocalDateTime.now());
+        log.setOperation(operation);
+        providerLogRepository.save(log);
+    }
+
     public ProviderDto archiveProvider(Long id, String reason) {
         Provider existing = providerRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Provider not found: " + id));
@@ -154,6 +181,9 @@ public class ProviderService {
             }
         }
 
+        // Log ARCHIVE operation before saving
+        createManualLog(existing, OperationType.ARCHIVE);
+
         existing.setArchived(true);
         existing.setState(STATE_DISABLED);
         providerRepository.save(existing);
@@ -163,6 +193,13 @@ public class ProviderService {
     public boolean unarchiveProvider(Long id) {
         int updated = providerRepository.unarchiveById(id);
         if (updated == 0) throw new ResponseStatusException(NOT_FOUND, "Provider not found: " + id);
+
+        // Reload provider to log UNARCHIVE operation
+        Provider provider = providerRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Provider not found after unarchive: " + id));
+
+        // Log UNARCHIVE operation
+        createManualLog(provider, OperationType.UNARCHIVE);
 
         refreshStateForProvider(id);
         return true;

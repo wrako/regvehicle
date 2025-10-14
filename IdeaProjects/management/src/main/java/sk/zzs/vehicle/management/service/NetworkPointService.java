@@ -11,12 +11,17 @@ import org.springframework.web.server.ResponseStatusException;
 import sk.zzs.vehicle.management.dto.NetworkPointDto;
 import sk.zzs.vehicle.management.dto.NetworkPointMapper;
 import sk.zzs.vehicle.management.entity.NetworkPoint;
+import sk.zzs.vehicle.management.entity.NetworkPointLog;
 import sk.zzs.vehicle.management.entity.Provider;
+import sk.zzs.vehicle.management.enumer.OperationType;
+import sk.zzs.vehicle.management.repository.NetworkPointLogRepository;
 import sk.zzs.vehicle.management.repository.NetworkPointRepository;
 import sk.zzs.vehicle.management.repository.ProviderRepository;
 import sk.zzs.vehicle.management.repository.VehicleRepository;
+import sk.zzs.vehicle.management.util.CurrentUserProvider;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -48,6 +53,9 @@ public class NetworkPointService {
     @Autowired
     @Lazy
     private ProviderService providerService;
+
+    @Autowired
+    private NetworkPointLogRepository networkPointLogRepository;
 
     @Transactional(readOnly = true)
     public List<NetworkPointDto> getAllNetworkPoints() {
@@ -185,6 +193,9 @@ public class NetworkPointService {
 
         queueService.clearQueue(id);
 
+        // Log ARCHIVE operation before saving
+        createManualLog(existing, OperationType.ARCHIVE);
+
         existing.setArchived(true);
         networkPointRepository.save(existing);
         refreshProviderStates(ownerId);
@@ -243,6 +254,9 @@ public class NetworkPointService {
         // Initialize queue with new provider (becomes current, position 0, start date = TODAY)
         queueService.addProviderToQueue(id, newProviderId, providerEndDate);
 
+        // Log UNARCHIVE operation
+        createManualLog(np, OperationType.UNARCHIVE);
+
         networkPointRepository.save(np);
         refreshProviderStates(previousOwnerId, newProvider.getId());
         return networkPointMapper.toDto(np);
@@ -292,6 +306,31 @@ public class NetworkPointService {
             result.put("errors", errors);
         }
         return result;
+    }
+
+    /**
+     * Manually create a log entry for operations not captured by entity listeners (ARCHIVE, UNARCHIVE)
+     */
+    private void createManualLog(NetworkPoint networkPoint, OperationType operation) {
+        NetworkPointLog log = new NetworkPointLog();
+        log.setNetworkPointId(networkPoint.getId());
+        log.setCode(networkPoint.getCode());
+        log.setName(networkPoint.getName());
+        log.setType(networkPoint.getType());
+        log.setValidFrom(networkPoint.getValidFrom());
+        log.setValidTo(networkPoint.getValidTo());
+        log.setArchived(networkPoint.isArchived());
+
+        // Capture provider information at time of operation
+        if (networkPoint.getOwner() != null) {
+            log.setProviderId(networkPoint.getOwner().getId());
+            log.setProviderName(networkPoint.getOwner().getName());
+        }
+
+        log.setAuthor(CurrentUserProvider.getUsernameOrSystem());
+        log.setTimestamp(LocalDateTime.now());
+        log.setOperation(operation);
+        networkPointLogRepository.save(log);
     }
 
     private void refreshProviderStates(Long... providerIds) {

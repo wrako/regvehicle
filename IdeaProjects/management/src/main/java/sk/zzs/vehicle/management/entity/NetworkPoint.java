@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.Where;
 import sk.zzs.vehicle.management.enumer.NetworkPointType;
+import sk.zzs.vehicle.management.listener.NetworkPointListener;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -14,6 +15,7 @@ import java.util.List;
 @Entity
 @Data
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@EntityListeners(NetworkPointListener.class)
 @Where(clause = "archived = false")
 public class NetworkPoint {
 

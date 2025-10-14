@@ -118,3 +118,33 @@ export type VehicleLogBlockDto = {
     providerName: string;
     logs: VehicleLogDto[];
 }
+
+export type ProviderLogDto = {
+    id: number;
+    providerId: number;
+    name?: string;
+    email?: string;
+    providerIdField?: string;
+    address?: string;
+    state?: string;
+    archived?: boolean;
+    author: string;
+    timestamp: string;
+    operation: string;
+}
+
+export type NetworkPointLogDto = {
+    id: number;
+    networkPointId: number;
+    code?: string;
+    name?: string;
+    type?: string;
+    validFrom?: string;
+    validTo?: string;
+    providerId?: number;
+    providerName?: string;
+    archived?: boolean;
+    author: string;
+    timestamp: string;
+    operation: string;
+}
