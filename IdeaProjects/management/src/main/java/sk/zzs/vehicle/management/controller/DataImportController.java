@@ -19,14 +19,18 @@ public class DataImportController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ImportResultSummary> importCsv(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {
+            System.out.println("!!!!!!!!!!! File is Empty !!!!!!!!!!!!");
             return ResponseEntity.badRequest()
                     .body(ImportResultSummary.error("Uploaded file is empty"));
         }
 
         if (!file.getOriginalFilename().toLowerCase().endsWith(".csv")) {
+            System.out.println("!!!!!!!!!!! File not a CSV !!!!!!!!!!!!");
+
             return ResponseEntity.badRequest()
                     .body(ImportResultSummary.error("Only .csv files are supported"));
         }
+        System.out.println("!!!!!!!!!!! Success passed controller !!!!!!!!!!!!");
 
         ImportResultSummary result = dataImportService.importAllEntities(file);
         return ResponseEntity.ok(result);

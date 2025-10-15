@@ -142,6 +142,7 @@ public class ProviderService {
         return providerRepository.getReferenceById(id);
     }
 
+    public Provider getByProviderID(String id) {return providerRepository.findByProviderId(id); }
 
     public long getProviderVehicles(Long id) {
         return vehicleRepository.countByProviderId(id);

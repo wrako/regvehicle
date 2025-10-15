@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Truck, Users, Settings, FileText, Ambulance, Building, RadioTower, SatelliteDish, MapPin } from 'lucide-react';
+import { LayoutDashboard, Truck, Users, Settings, FileText, Ambulance, Building, RadioTower, SatelliteDish, MapPin, Upload } from 'lucide-react';
 import {
   SidebarProvider,
   Sidebar,
@@ -20,6 +20,7 @@ const menuItems = [
   { href: '/dashboard', label: 'Vozidlá', icon: Truck },
   { href: '/dashboard/providers', label: 'Poskytovatelia', icon: Building },
   { href: '/dashboard/network-points', label: 'Sieťové body', icon: MapPin },
+  { href: '/dashboard/import-data', label: 'Import Data', icon: Upload },
   // { href: '/dashboard/rdst-devices', label: 'RDST Zariadenia', icon: RadioTower },
   // { href: '/dashboard/avl-devices', label: 'AVL Zariadenia', icon: SatelliteDish },
 ]

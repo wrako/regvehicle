@@ -15,7 +15,7 @@ import java.util.Optional;
 public interface ProviderRepository extends JpaRepository<Provider, Long> {
 
     boolean existsByProviderId(String providerId);
-    Optional<Provider> findByProviderId(String providerId);
+    Provider findByProviderId(String providerId);
 
 
     @Transactional

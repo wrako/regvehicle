@@ -500,3 +500,22 @@ export async function createNetworkPoint(data: any, bypassCapacityCheck: boolean
     ensureOk(res);
     return await res.json();
 }
+
+// Data import API function
+export async function uploadCsvFile(file: File) {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await fetch(`${API_BASE}/api/import`, {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+    });
+
+    if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `Upload failed: ${res.status}`);
+    }
+
+    return await res.json();
+}
