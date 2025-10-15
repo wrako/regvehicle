@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { API_BASE } from "@/lib/api";
+import { createProvider } from "@/lib/api";
 
 // Schema for Provider (matches backend entity)
 const providerSchema = z.object({
@@ -38,32 +38,13 @@ export function NewProviderForm() {
 
     async function onSubmit(values: ProviderFormValues) {
         try {
-            const res = await fetch(`${API_BASE}/providers`, {
-                method: "POST",
-                credentials: "include",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(values),
-            });
-
-            if (!res.ok) {
-                // Surface backend message if available
-                const body = await res.text().catch(() => "");
-                let msg = body;
-                try {
-                    const obj = JSON.parse(body);
-                    msg = obj?.message || obj?.error || body;
-                } catch {
-                    // body is plain text; keep as-is
-                }
-                throw new Error(msg || "Failed to create provider");
-            }
-
-            toast({ title: "Provider created", description: "The provider has been registered." });
+            await createProvider(values);
+            toast({ title: "Poskytovateľ vytvorený", description: "Poskytovateľ bol úspešne zaregistrovaný." });
             router.push("/dashboard/providers");
         } catch (e: any) {
             toast({
-                title: "Error creating provider",
-                description: e?.message ?? "Please try again.",
+                title: "Chyba pri vytváraní poskytovateľa",
+                description: e?.message ?? "Skúste to znova.",
                 variant: "destructive",
             });
         }

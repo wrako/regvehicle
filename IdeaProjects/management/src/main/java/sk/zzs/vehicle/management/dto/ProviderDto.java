@@ -2,6 +2,7 @@ package sk.zzs.vehicle.management.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
+import sk.zzs.vehicle.management.enumer.ProviderState;
 
 import java.util.List;
 
@@ -13,4 +14,5 @@ public class ProviderDto {
     private String name;
     private String email;
     private String address;
+    private ProviderState state;
 }

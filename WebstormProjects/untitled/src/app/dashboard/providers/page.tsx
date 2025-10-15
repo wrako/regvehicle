@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { API_BASE } from "@/constants/api";
 import { cancellableFetch } from "@/utils/fetchUtils";
 import { runProviderEmptyCheck } from "@/lib/api";
+import type { ProviderState } from "@/types";
 
 type Provider = {
     id: number;
@@ -18,12 +19,28 @@ type Provider = {
     name: string;
     email?: string;
     address: string;
+    state: ProviderState;
 };
 
 type ProviderRow = Provider & {
     vehicles: number;
     networkPoints: number;
 };
+
+// State indicator component
+function StateIndicator({ state }: { state: ProviderState }) {
+    const colors = {
+        ACTIVE: "bg-green-500",
+        UNBALANCED: "bg-yellow-500",
+        DISABLED: "bg-red-500",
+    };
+
+    return (
+        <div className="flex items-center gap-2">
+            <div className={`w-3 h-3 rounded-full ${colors[state]}`} />
+        </div>
+    );
+}
 
 export default function ProvidersPage() {
     const { toast } = useToast();
@@ -231,6 +248,7 @@ export default function ProvidersPage() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
+                                    <TableHead className="w-[80px]"></TableHead>
                                     <TableHead>Provider ID</TableHead>
                                     <TableHead>Name</TableHead>
                                     <TableHead>Email</TableHead>
@@ -245,13 +263,16 @@ export default function ProvidersPage() {
                             <TableBody>
                                 {loading ? (
                                     <TableRow>
-                                        <TableCell colSpan={7} className="text-center h-24">
+                                        <TableCell colSpan={8} className="text-center h-24">
                                             Loading…
                                         </TableCell>
                                     </TableRow>
                                 ) : items.length > 0 ? (
                                     items.map((p) => (
                                         <TableRow key={p.id}>
+                                            <TableCell>
+                                                <StateIndicator state={p.state} />
+                                            </TableCell>
                                             <TableCell className="font-medium">{p.providerId}</TableCell>
                                             <TableCell>{p.name}</TableCell>
                                             <TableCell>{p.email || "—"}</TableCell>
@@ -299,7 +320,7 @@ export default function ProvidersPage() {
                                     ))
                                 ) : (
                                     <TableRow>
-                                        <TableCell colSpan={7} className="h-24 text-center">
+                                        <TableCell colSpan={8} className="h-24 text-center">
                                             No providers found.
                                         </TableCell>
                                     </TableRow>

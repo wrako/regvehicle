@@ -14,6 +14,10 @@ import java.util.Optional;
 
 public interface ProviderRepository extends JpaRepository<Provider, Long> {
 
+    boolean existsByProviderId(String providerId);
+    Optional<Provider> findByProviderId(String providerId);
+
+
     @Transactional
     @Modifying
     @Query(value = "UPDATE provider SET archived = false WHERE id = :id AND archived = true", nativeQuery = true)
@@ -50,4 +54,11 @@ public interface ProviderRepository extends JpaRepository<Provider, Long> {
         )
         """, nativeQuery = true)
     List<Provider> findActiveProvidersWithoutNetworkPoints();
+
+    /**
+     * Find provider by providerId (including archived), ignoring the @Where clause.
+     * Used to check for duplicate providerId values.
+     */
+    @Query(value = "SELECT * FROM provider WHERE provider_id = :providerId", nativeQuery = true)
+    Optional<Provider> findByProviderIdIncludingArchived(@Param("providerId") String providerId);
 }

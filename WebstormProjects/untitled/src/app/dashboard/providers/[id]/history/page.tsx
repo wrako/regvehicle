@@ -38,7 +38,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { OperationBadge, type OperationType } from "@/components/common";
 import { formatDate } from "@/lib/date";
-import { ProviderLogDto } from "@/types";
+import { ProviderLogDto, type ProviderState } from "@/types";
 import { getProviderHistory } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -69,7 +69,7 @@ function getLocalDateString(date: Date | string | null | undefined): string {
 }
 
 const OPERATION_TYPES: OperationType[] = ["CREATE", "UPDATE", "DELETE", "ARCHIVE", "UNARCHIVE"];
-const PROVIDER_STATES = ["ACTIVE", "DISABLED", "UNBALANCED"];
+const PROVIDER_STATES: ProviderState[] = ["ACTIVE", "DISABLED", "UNBALANCED"];
 
 type ArchivedFilter = "any" | "yes" | "no";
 
@@ -202,7 +202,7 @@ export default function ProviderHistoryPage() {
     const [nameFilter, setNameFilter] = useState("");
     const [emailFilter, setEmailFilter] = useState("");
     const [addressFilter, setAddressFilter] = useState("");
-    const [stateFilters, setStateFilters] = useState<string[]>([]); // MULTI-SELECT
+    const [stateFilters, setStateFilters] = useState<ProviderState[]>([]); // MULTI-SELECT
     const [archivedFilter, setArchivedFilter] = useState<ArchivedFilter>("any");
 
     useEffect(() => {

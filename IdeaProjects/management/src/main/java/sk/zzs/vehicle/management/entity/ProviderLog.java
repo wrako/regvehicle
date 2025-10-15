@@ -3,6 +3,7 @@ package sk.zzs.vehicle.management.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 import sk.zzs.vehicle.management.enumer.OperationType;
+import sk.zzs.vehicle.management.enumer.ProviderState;
 
 import java.time.LocalDateTime;
 
@@ -20,7 +21,10 @@ public class ProviderLog {
     private String email;
     private String providerIdField;
     private String address;
-    private String state;
+
+    @Enumerated(EnumType.STRING)
+    private ProviderState state;
+
     private Boolean archived;
 
     // audit info

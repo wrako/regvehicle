@@ -21,6 +21,7 @@ public class ProviderMapper {
                 .name(provider.getName())
                 .email(provider.getEmail())
                 .address(provider.getAddress())
+                .state(provider.getState())
                 .build();
     }
 
@@ -33,6 +34,7 @@ public class ProviderMapper {
                 .name(provider.getName())
                 .email(provider.getEmail())
                 .address(provider.getAddress())
+                .state(provider.getState())
                 .build();
     }
 

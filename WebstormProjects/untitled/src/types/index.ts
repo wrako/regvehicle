@@ -33,10 +33,13 @@ export type ProviderDto = {
     name: string;
     email?: string;
     address: string;
+    state?: ProviderState;
     networkPoints?: NetworkPointDto[];
 }
 
 export type NetworkPointType = 'STATION' | 'SUBSTATION' | 'HOSPITAL';
+
+export type ProviderState = 'ACTIVE' | 'DISABLED' | 'UNBALANCED';
 
 export type NetworkPoint = {
     id: string;
@@ -126,7 +129,7 @@ export type ProviderLogDto = {
     email?: string;
     providerIdField?: string;
     address?: string;
-    state?: string;
+    state?: ProviderState;
     archived?: boolean;
     author: string;
     timestamp: string;

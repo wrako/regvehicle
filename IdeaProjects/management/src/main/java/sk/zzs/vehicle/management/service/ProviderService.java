@@ -15,6 +15,7 @@ import sk.zzs.vehicle.management.entity.Provider;
 import sk.zzs.vehicle.management.entity.ProviderLog;
 import sk.zzs.vehicle.management.entity.Vehicle;
 import sk.zzs.vehicle.management.enumer.OperationType;
+import sk.zzs.vehicle.management.enumer.ProviderState;
 import sk.zzs.vehicle.management.repository.ProviderLogRepository;
 import sk.zzs.vehicle.management.repository.ProviderRepository;
 import sk.zzs.vehicle.management.repository.VehicleRepository;
@@ -34,9 +35,6 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 @Transactional
 public class ProviderService {
 
-    private static final String STATE_ACTIVE = "ACTIVE";
-    private static final String STATE_DISABLED = "DISABLED";
-    private static final String STATE_UNBALANCED = "UNBALANCED";
     @Autowired
     private ProviderRepository providerRepository;
 
@@ -80,6 +78,14 @@ public class ProviderService {
     }
 
     public ProviderDto createProvider(ProviderDto dto) {
+        // Check for duplicate providerId
+        if (dto.getProviderId() != null && !dto.getProviderId().trim().isEmpty()) {
+            providerRepository.findByProviderIdIncludingArchived(dto.getProviderId()).ifPresent(existing -> {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Poskytovateľ s ID \"" + dto.getProviderId() + "\" už existuje. Nemožno vytvoriť duplicitný záznam.");
+            });
+        }
+
         Provider entity = providerMapper.toEntity(dto);
         entity.setState(determineState(
                 entity.getVehicles() != null ? entity.getVehicles().size() : 0,
@@ -92,6 +98,16 @@ public class ProviderService {
     public ProviderDto updateProvider(Long id, ProviderDto dto) {
         Provider entity = providerRepository.findById(id)
                 .orElseThrow(() -> CrudUtils.notFound("Provider", id));
+
+        // Check for duplicate providerId (excluding current entity)
+        if (dto.getProviderId() != null && !dto.getProviderId().trim().isEmpty()) {
+            providerRepository.findByProviderIdIncludingArchived(dto.getProviderId()).ifPresent(existing -> {
+                if (!existing.getId().equals(id)) {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Poskytovateľ s ID \"" + dto.getProviderId() + "\" už existuje. Nemožno vytvoriť duplicitný záznam.");
+                }
+            });
+        }
 
         providerMapper.copyToEntity(dto, entity);
         Provider saved = providerRepository.save(entity);
@@ -185,7 +201,7 @@ public class ProviderService {
         createManualLog(existing, OperationType.ARCHIVE);
 
         existing.setArchived(true);
-        existing.setState(STATE_DISABLED);
+        existing.setState(ProviderState.DISABLED);
         providerRepository.save(existing);
         return providerMapper.toDto(existing);
     }
@@ -222,7 +238,7 @@ public class ProviderService {
         }
 
         providerRepository.findByIdIncludingArchived(providerId).ifPresent(provider -> {
-            String state = determineState(
+            ProviderState state = determineState(
                     vehicleRepository.countByProviderId(providerId),
                     networkPointRepository.countByProviderId(providerId));
             if (!Objects.equals(state, provider.getState())) {
@@ -235,19 +251,19 @@ public class ProviderService {
         });
     }
 
-    private String determineState(long vehicleCount, long networkPointCount) {
+    private ProviderState determineState(long vehicleCount, long networkPointCount) {
         if (vehicleCount == 0 && networkPointCount == 0) {
-            return STATE_DISABLED;
+            return ProviderState.DISABLED;
         }
 
         if (networkPointCount > 0) {
             long requiredVehicles = (long) Math.ceil(networkPointCount * 1.3d);
             if (vehicleCount < requiredVehicles) {
-                return STATE_UNBALANCED;
+                return ProviderState.UNBALANCED;
             }
         }
 
-        return STATE_ACTIVE;
+        return ProviderState.ACTIVE;
     }
 
 }

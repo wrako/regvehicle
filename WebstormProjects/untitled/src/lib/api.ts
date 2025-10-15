@@ -73,6 +73,34 @@ async function handleVehicleError(res: Response) {
     return res;
 }
 
+async function handleProviderError(res: Response) {
+    if (!res.ok) {
+        // Clone the response so we can read it multiple times
+        const resClone = res.clone();
+        let backendMessage = "";
+
+        // Try to get error message from response body
+        try {
+            const text = await resClone.text();
+            if (text) {
+                backendMessage = text;
+            }
+        } catch (e) {
+            // Ignore parsing errors
+        }
+
+        // Translate backend error messages to Slovak based on status and content
+        if (res.status === 409) {
+            // Display Slovak error message for duplicate providerId
+            throw new Error("Poskytovateľ s týmto ID už existuje");
+        }
+
+        // For other errors, show backend message or generic error
+        throw new Error(backendMessage || `Chyba: ${res.status} ${res.statusText}`);
+    }
+    return res;
+}
+
 export async function listArchivedVehicles(params: {
     page?: number;
     size?: number;
@@ -126,7 +154,7 @@ export async function createProvider(data: { providerId: string; name: string; a
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
     });
-    ensureOk(res);
+    await handleProviderError(res);
     return await res.json();
 }
 
@@ -137,7 +165,7 @@ export async function updateProvider(id: number, data: any) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
     });
-    ensureOk(res);
+    await handleProviderError(res);
     return await res.json();
 }
 

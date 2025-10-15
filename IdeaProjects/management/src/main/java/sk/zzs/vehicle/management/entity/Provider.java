@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.DynamicInsert;
 import org.hibernate.annotations.Where;
+import sk.zzs.vehicle.management.enumer.ProviderState;
 import sk.zzs.vehicle.management.listener.ProviderListener;
 
 import java.util.ArrayList;
@@ -29,7 +30,7 @@ public class Provider {
     private String password = "default123";
 
 
-
+    @Column(unique = true, nullable = false)
     private String providerId; // ID poskytovateľa ZZS
     private String address;
 
@@ -41,8 +42,9 @@ public class Provider {
     @OneToMany(mappedBy = "owner", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<NetworkPoint> networkPoints = new ArrayList<>();
 
-    @Column(length = 20)
-    private String state = "DISABLED";
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ProviderState state = ProviderState.DISABLED;
 
     @Column(nullable = false)
     private boolean archived = false;
