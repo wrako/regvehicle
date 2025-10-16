@@ -76,11 +76,18 @@ export default function DashboardPage() {
 
         setLoading(true);
         try {
+            // Get JWT token from localStorage
+            const token = localStorage.getItem('auth_token');
+            const headers: HeadersInit = { "Content-Type": "application/json" };
+            if (token) {
+                headers["Authorization"] = `Bearer ${token}`;
+            }
+
             const data = await cancellableFetch(
                 queryKey,
                 {
                     method: "GET",
-                    headers: { "Content-Type": "application/json" },
+                    headers,
                 },
                 "vehicles-list"
             );

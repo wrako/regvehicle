@@ -50,9 +50,20 @@ export default function ProvidersPage() {
     const loadedRef = useRef(false);
     const lastQueryKeyRef = useRef<string>("");
 
+    function getAuthHeaders(): HeadersInit {
+        const token = localStorage.getItem('auth_token');
+        const headers: HeadersInit = {};
+        if (token) {
+            headers["Authorization"] = `Bearer ${token}`;
+        }
+        return headers;
+    }
+
     async function getVehiclesCount(providerId: number): Promise<number> {
         try {
-            const res = await fetch(`${API_BASE}/providers/vehicles/${providerId}`);
+            const res = await fetch(`${API_BASE}/providers/vehicles/${providerId}`, {
+                headers: getAuthHeaders()
+            });
             if (!res.ok) return 0;
             const txt = await res.text();
             const n = Number(txt);
@@ -64,7 +75,9 @@ export default function ProvidersPage() {
 
     async function getNetworkPointsCount(providerId: number): Promise<number> {
         try {
-            const res = await fetch(`${API_BASE}/providers/network-point/${providerId}`);
+            const res = await fetch(`${API_BASE}/providers/network-point/${providerId}`, {
+                headers: getAuthHeaders()
+            });
             if (!res.ok) return 0;
             const txt = await res.text();
             const n = Number(txt);
@@ -87,7 +100,7 @@ export default function ProvidersPage() {
         try {
             const base: Provider[] = await cancellableFetch(
                 `${API_BASE}/providers`,
-                { headers: { Accept: "application/json" } },
+                { headers: { Accept: "application/json", ...getAuthHeaders() } },
                 "providers-list"
             );
 
@@ -124,7 +137,10 @@ export default function ProvidersPage() {
     async function handleDelete(id: number) {
         if (!confirm("Are you sure you want to delete this provider?")) return;
         try {
-            const res = await fetch(`${API_BASE}/providers/${id}`, { method: "DELETE" });
+            const res = await fetch(`${API_BASE}/providers/${id}`, {
+                method: "DELETE",
+                headers: getAuthHeaders()
+            });
             if (!res.ok) {
                 const errorText = await res.text();
                 if (res.status === 409) {
@@ -154,7 +170,10 @@ export default function ProvidersPage() {
     async function handleArchive(id: number) {
         if (!confirm("Are you sure you want to archive this provider?")) return;
         try {
-            const res = await fetch(`${API_BASE}/providers/${id}/archive`, { method: "POST" });
+            const res = await fetch(`${API_BASE}/providers/${id}/archive`, {
+                method: "POST",
+                headers: getAuthHeaders()
+            });
             if (!res.ok) throw new Error(await res.text());
             toast({ title: "Provider archived successfully" });
             // Reset ref to allow reload

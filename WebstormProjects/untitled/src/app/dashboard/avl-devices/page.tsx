@@ -10,6 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { useToast } from "@/hooks/use-toast";
 import { API_BASE } from "@/constants/api";
 import { cancellableFetch } from "@/utils/fetchUtils";
+import { getAuthHeaders } from "@/lib/auth-headers";
 
 type AvlDevice = {
     id: number;
@@ -37,7 +38,7 @@ export default function AvlDevicesPage() {
             setLoading(true);
             const data = await cancellableFetch<AvlDevice[]>(
                 `${API_BASE}/avl-devices`,
-                { headers: { Accept: "application/json" } },
+                { headers: { Accept: "application/json", ...getAuthHeaders() } },
                 "avl-devices-list"
             );
             setDevices(data);
@@ -56,7 +57,10 @@ export default function AvlDevicesPage() {
     async function handleDelete(id: number) {
         if (!confirm("Naozaj chcete odstrániť toto AVL zariadenie?")) return;
         try {
-            const res = await fetch(`${API_BASE}/avl-devices/${id}`, { method: "DELETE" });
+            const res = await fetch(`${API_BASE}/avl-devices/${id}`, {
+                method: "DELETE",
+                headers: getAuthHeaders()
+            });
             if (!res.ok) throw new Error(await res.text());
             toast({ title: "Zariadenie odstránené" });
             // Reset ref to allow reload

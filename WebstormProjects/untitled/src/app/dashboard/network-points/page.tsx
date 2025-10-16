@@ -38,6 +38,15 @@ export default function NetworkPointsPage() {
     const [checkingExpired, setCheckingExpired] = useState(false);
     const lastQueryKeyRef = useRef<string>("");
 
+    function getAuthHeaders(): HeadersInit {
+        const token = localStorage.getItem('auth_token');
+        const headers: HeadersInit = {};
+        if (token) {
+            headers["Authorization"] = `Bearer ${token}`;
+        }
+        return headers;
+    }
+
     const queryKey = useMemo(() => `${API_BASE}/network-points`, []);
 
     const load = useCallback(async () => {
@@ -51,7 +60,7 @@ export default function NetworkPointsPage() {
         try {
             const data = await cancellableFetch<NetworkPoint[]>(
                 `${API_BASE}/network-points`,
-                { headers: { Accept: "application/json" } },
+                { headers: { Accept: "application/json", ...getAuthHeaders() } },
                 "network-points-list"
             );
             setItems(data);
@@ -100,7 +109,10 @@ export default function NetworkPointsPage() {
     async function handleDelete(id: number) {
         if (!confirm("Are you sure you want to delete this network point?")) return;
         try {
-            const res = await fetch(`${API_BASE}/network-points/${id}`, { method: "DELETE" });
+            const res = await fetch(`${API_BASE}/network-points/${id}`, {
+                method: "DELETE",
+                headers: getAuthHeaders()
+            });
             if (!res.ok) {
                 const errorText = await res.text();
                 if (res.status === 409) {
@@ -126,7 +138,10 @@ export default function NetworkPointsPage() {
     async function handleArchive(id: number) {
         if (!confirm("Are you sure you want to archive this network point?")) return;
         try {
-            const res = await fetch(`${API_BASE}/network-points/${id}/archive`, { method: "POST" });
+            const res = await fetch(`${API_BASE}/network-points/${id}/archive`, {
+                method: "POST",
+                headers: getAuthHeaders()
+            });
             if (!res.ok) throw new Error(await res.text());
             toast({ title: "Network point archived successfully" });
             // Reset ref to allow reload

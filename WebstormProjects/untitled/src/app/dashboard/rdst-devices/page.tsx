@@ -10,6 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { useToast } from "@/hooks/use-toast";
 import { API_BASE } from "@/constants/api";
 import { cancellableFetch } from "@/utils/fetchUtils";
+import { getAuthHeaders } from "@/lib/auth-headers";
 
 type RdstDevice = { id: number; model: string; rdstId: string };
 
@@ -32,7 +33,7 @@ export default function RdstDevicesPage() {
         try {
             const data = await cancellableFetch<RdstDevice[]>(
                 `${API_BASE}/rdst-devices`,
-                { headers: { Accept: "application/json" } },
+                { headers: { Accept: "application/json", ...getAuthHeaders() } },
                 "rdst-devices-list"
             );
             setDevices(data);
@@ -51,7 +52,10 @@ export default function RdstDevicesPage() {
     async function handleDelete(id: number) {
         if (!confirm("Naozaj chcete odstrániť toto RDST zariadenie?")) return;
         try {
-            const res = await fetch(`${API_BASE}/rdst-devices/${id}`, { method: "DELETE" });
+            const res = await fetch(`${API_BASE}/rdst-devices/${id}`, {
+                method: "DELETE",
+                headers: getAuthHeaders()
+            });
             if (!res.ok) throw new Error(await res.text());
             toast({ title: "RDST zariadenie odstránené" });
             // Reset ref to allow reload

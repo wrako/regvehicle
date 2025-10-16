@@ -1,4 +1,5 @@
 import { API_BASE } from "@/constants/api";
+import { getAuthHeaders } from "@/lib/auth-headers";
 
 type OperationType = "CREATE" | "UPDATE" | "DELETE";
 
@@ -24,7 +25,10 @@ export type VehicleLog = {
 };
 
 export async function fetchVehicle(vehicleId: string): Promise<Vehicle | null> {
-    const res = await fetch(`${API_BASE}/vehicles/${vehicleId}`, { credentials: "include" });
+    const res = await fetch(`${API_BASE}/vehicles/${vehicleId}`, {
+        credentials: "include",
+        headers: getAuthHeaders()
+    });
     if (res.status === 404) return null;
     if (!res.ok) throw new Error(await res.text().catch(() => "Failed to load vehicle"));
     const raw = await res.json();
@@ -57,7 +61,10 @@ type VehicleLogApi = {
 };
 
 export async function fetchHistory(vehicleId: string): Promise<VehicleLog[]> {
-    const res = await fetch(`${API_BASE}/vehicle-logs/history/${vehicleId}`, { credentials: "include" });
+    const res = await fetch(`${API_BASE}/vehicle-logs/history/${vehicleId}`, {
+        credentials: "include",
+        headers: getAuthHeaders()
+    });
 
     if (res.status === 404) return [];
     if (!res.ok) throw new Error(await res.text().catch(() => "Failed to load history"));

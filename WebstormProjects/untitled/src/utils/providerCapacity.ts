@@ -1,7 +1,11 @@
 import { API_BASE } from "@/constants/api";
+import { getAuthHeaders } from "@/lib/auth-headers";
 
 export async function getProviderVehiclesCount(providerId: number): Promise<number> {
-    const res = await fetch(`${API_BASE}/providers/vehicles/${providerId}`, { credentials: "include" });
+    const res = await fetch(`${API_BASE}/providers/vehicles/${providerId}`, {
+        credentials: "include",
+        headers: getAuthHeaders()
+    });
     if (!res.ok) return 0;
     const txt = await res.text();
     const n = Number(txt);
@@ -9,7 +13,10 @@ export async function getProviderVehiclesCount(providerId: number): Promise<numb
 }
 
 export async function getProviderNetworkPointsCount(providerId: number): Promise<number> {
-    const res = await fetch(`${API_BASE}/providers/network-point/${providerId}`, { credentials: "include" });
+    const res = await fetch(`${API_BASE}/providers/network-point/${providerId}`, {
+        credentials: "include",
+        headers: getAuthHeaders()
+    });
     if (!res.ok) return 0;
     const txt = await res.text();
     const n = Number(txt);

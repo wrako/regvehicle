@@ -1,55 +1,117 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
 
 export default function RegisterPage() {
-  const router = useRouter();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { register } = useAuth();
+  const { toast } = useToast();
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    router.push("/dashboard");
+
+    if (password !== confirmPassword) {
+      toast({
+        variant: "destructive",
+        title: "Chyba",
+        description: "Heslá sa nezhodujú",
+      });
+      return;
+    }
+
+    if (password.length < 4) {
+      toast({
+        variant: "destructive",
+        title: "Chyba",
+        description: "Heslo musí mať aspoň 4 znaky",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      await register(username, password);
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Chyba registrácie",
+        description: error instanceof Error ? error.message : "Registrácia zlyhala",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Create an account</CardTitle>
-        <CardDescription>Enter your details to register</CardDescription>
+        <CardTitle>Vytvorenie nového účtu</CardTitle>
+        <CardDescription>Zadajte údaje pre registráciu</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleRegister} className="space-y-6">
           <div>
-            <Label htmlFor="name">Full Name</Label>
-            <Input id="name" name="name" type="text" required />
+            <Label htmlFor="username">Používateľské meno</Label>
+            <Input
+              id="username"
+              name="username"
+              type="text"
+              required
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              disabled={isSubmitting}
+              placeholder="Zadajte používateľské meno"
+            />
           </div>
           <div>
-            <Label htmlFor="email">Email Address</Label>
-            <Input id="email" name="email" type="email" autoComplete="email" required />
+            <Label htmlFor="password">Heslo</Label>
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="new-password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={isSubmitting}
+              placeholder="Zadajte heslo"
+            />
           </div>
           <div>
-            <Label htmlFor="password">Password</Label>
-            <Input id="password" name="password" type="password" autoComplete="new-password" required />
+            <Label htmlFor="confirm-password">Potvrdenie hesla</Label>
+            <Input
+              id="confirm-password"
+              name="confirm-password"
+              type="password"
+              required
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              disabled={isSubmitting}
+              placeholder="Zopakujte heslo"
+            />
           </div>
           <div>
-            <Label htmlFor="confirm-password">Confirm Password</Label>
-            <Input id="confirm-password" name="confirm-password" type="password" required />
-          </div>
-          <div>
-            <Button type="submit" className="w-full">
-              Register
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? "Registrácia..." : "Registrovať sa"}
             </Button>
           </div>
         </form>
         <div className="mt-6 text-center">
           <p className="text-sm">
-            Already have an account?{" "}
+            Už máte účet?{" "}
             <Link href="/login" className="font-medium text-primary hover:text-primary/90">
-              Sign in
+              Prihlásiť sa
             </Link>
           </p>
         </div>

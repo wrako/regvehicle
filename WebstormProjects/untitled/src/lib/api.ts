@@ -2,6 +2,21 @@
 export const API_BASE =
     process.env.NEXT_PUBLIC_API_BASE?.replace(/\/+$/, "") || "http://localhost:8080";
 
+// Helper to get auth headers with JWT token
+function getAuthHeaders(): HeadersInit {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    const headers: HeadersInit = {};
+    if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+    }
+    return headers;
+}
+
+// Helper to merge auth headers with other headers
+function withAuth(headers: HeadersInit = {}): HeadersInit {
+    return { ...headers, ...getAuthHeaders() };
+}
+
 export type VehicleStatus = "ACTIVE" | "RESERVE" | "PREREGISTERED";
 
 export interface Vehicle {
@@ -117,7 +132,7 @@ export async function listArchivedVehicles(params: {
     const res = await fetch(url.toString(), {
         method: "POST", // <-- IMPORTANT: backend expects POST with a filter body
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: withAuth({ "Content-Type": "application/json" }),
         body: JSON.stringify(body),
     });
     ensureOk(res);
@@ -129,6 +144,7 @@ export async function unarchiveVehicle(id: number, status: VehicleStatus) {
         `${API_BASE}/vehicles/${id}/unarchive?status=${encodeURIComponent(status)}`,
         {
             method: "POST",
+        headers: getAuthHeaders(),
             credentials: "include",
         }
     );
@@ -142,6 +158,7 @@ export async function getProvider(id: number) {
     const res = await fetch(`${API_BASE}/providers/${id}`, {
         method: "GET",
         credentials: "include",
+        headers: getAuthHeaders(),
     });
     ensureOk(res);
     return await res.json();
@@ -151,7 +168,7 @@ export async function createProvider(data: { providerId: string; name: string; a
     const res = await fetch(`${API_BASE}/providers`, {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: withAuth({ "Content-Type": "application/json" }),
         body: JSON.stringify(data),
     });
     await handleProviderError(res);
@@ -162,7 +179,7 @@ export async function updateProvider(id: number, data: any) {
     const res = await fetch(`${API_BASE}/providers/${id}`, {
         method: "PUT",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: withAuth({ "Content-Type": "application/json" }),
         body: JSON.stringify(data),
     });
     await handleProviderError(res);
@@ -174,6 +191,7 @@ export async function deleteProvider(id: number) {
     const res = await fetch(`${API_BASE}/providers/${id}`, {
         method: "DELETE",
         credentials: "include",
+        headers: getAuthHeaders(),
     });
     ensureOk(res);
 }
@@ -183,6 +201,7 @@ export async function getNetworkPoint(id: number) {
     const res = await fetch(`${API_BASE}/network-points/${id}`, {
         method: "GET",
         credentials: "include",
+        headers: getAuthHeaders(),
     });
     ensureOk(res);
     return await res.json();
@@ -192,7 +211,7 @@ export async function updateNetworkPoint(id: number, data: any) {
     const res = await fetch(`${API_BASE}/network-points/${id}`, {
         method: "PUT",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: withAuth({ "Content-Type": "application/json" }),
         body: JSON.stringify(data),
     });
     ensureOk(res);
@@ -203,6 +222,7 @@ export async function deleteNetworkPoint(id: number) {
     const res = await fetch(`${API_BASE}/network-points/${id}`, {
         method: "DELETE",
         credentials: "include",
+        headers: getAuthHeaders(),
     });
     ensureOk(res);
 }
@@ -214,6 +234,7 @@ export async function archiveNetworkPoint(id: number, params?: { reason?: string
     }
     const res = await fetch(url.toString(), {
         method: "POST",
+        headers: getAuthHeaders(),
         credentials: "include",
     });
     if (!res.ok) {
@@ -232,6 +253,7 @@ export async function unarchiveNetworkPoint(id: number, providerId: number, prov
 
     const res = await fetch(url.toString(), {
         method: "POST",
+        headers: getAuthHeaders(),
         credentials: "include",
     });
     if (!res.ok) {
@@ -247,7 +269,8 @@ export async function getArchivedNetworkPoints(page: number = 0, size: number = 
         {
             method: "GET",
             credentials: "include",
-        }
+        headers: getAuthHeaders(),
+    }
     );
     ensureOk(res);
     return await res.json();
@@ -257,6 +280,7 @@ export async function getArchivedNetworkPoint(id: number) {
     const res = await fetch(`${API_BASE}/network-points/archived/${id}`, {
         method: "GET",
         credentials: "include",
+        headers: getAuthHeaders(),
     });
     ensureOk(res);
     return await res.json();
@@ -265,6 +289,7 @@ export async function getArchivedNetworkPoint(id: number) {
 export async function runExpireCheckNetworkPoints() {
     const res = await fetch(`${API_BASE}/network-points/expire-check`, {
         method: "POST",
+        headers: getAuthHeaders(),
         credentials: "include",
     });
     if (!res.ok) {
@@ -277,6 +302,7 @@ export async function runExpireCheckNetworkPoints() {
 export async function runProviderEmptyCheck() {
     const res = await fetch(`${API_BASE}/providers/empty-check`, {
         method: "POST",
+        headers: getAuthHeaders(),
         credentials: "include",
     });
     if (!res.ok) {
@@ -293,6 +319,7 @@ export async function archiveProvider(id: number, params?: { reason?: string }) 
     }
     const res = await fetch(url.toString(), {
         method: "POST",
+        headers: getAuthHeaders(),
         credentials: "include",
     });
     if (!res.ok) {
@@ -305,6 +332,7 @@ export async function archiveProvider(id: number, params?: { reason?: string }) 
 export async function unarchiveProvider(id: number) {
     const res = await fetch(`${API_BASE}/providers/${id}/unarchive`, {
         method: "POST",
+        headers: getAuthHeaders(),
         credentials: "include",
     });
     if (!res.ok) {
@@ -320,7 +348,8 @@ export async function getArchivedProviders(page: number = 0, size: number = 100)
         {
             method: "GET",
             credentials: "include",
-        }
+        headers: getAuthHeaders(),
+    }
     );
     ensureOk(res);
     return await res.json();
@@ -330,6 +359,7 @@ export async function getArchivedProvider(id: number) {
     const res = await fetch(`${API_BASE}/providers/archived/${id}`, {
         method: "GET",
         credentials: "include",
+        headers: getAuthHeaders(),
     });
     ensureOk(res);
     return await res.json();
@@ -339,6 +369,7 @@ export async function getProviderVehicleCount(id: number | string) {
     const res = await fetch(`${API_BASE}/providers/vehicles/${id}`, {
         method: "GET",
         credentials: "include",
+        headers: getAuthHeaders(),
     });
     ensureOk(res);
     return await res.json();
@@ -348,6 +379,7 @@ export async function getProviderNetworkPointCount(id: number | string) {
     const res = await fetch(`${API_BASE}/providers/network-point/${id}`, {
         method: "GET",
         credentials: "include",
+        headers: getAuthHeaders(),
     });
     ensureOk(res);
     return await res.json();
@@ -357,6 +389,7 @@ export async function getProviderHistory(id: number | string) {
     const res = await fetch(`${API_BASE}/provider-logs/history/${id}`, {
         method: "GET",
         credentials: "include",
+        headers: getAuthHeaders(),
         cache: "no-store",
     });
     if (!res.ok) {
@@ -369,6 +402,7 @@ export async function getNetworkPointHistory(id: number | string) {
     const res = await fetch(`${API_BASE}/network-point-logs/history/${id}`, {
         method: "GET",
         credentials: "include",
+        headers: getAuthHeaders(),
         cache: "no-store",
     });
     if (!res.ok) {
@@ -382,6 +416,7 @@ export async function getProviders() {
     const res = await fetch(`${API_BASE}/providers`, {
         method: "GET",
         credentials: "include",
+        headers: getAuthHeaders(),
     });
     ensureOk(res);
     return await res.json();
@@ -391,6 +426,7 @@ export async function getNetworkPoints() {
     const res = await fetch(`${API_BASE}/network-points`, {
         method: "GET",
         credentials: "include",
+        headers: getAuthHeaders(),
     });
     ensureOk(res);
     return await res.json();
@@ -400,6 +436,7 @@ export async function getAvlDevices() {
     const res = await fetch(`${API_BASE}/avl-devices`, {
         method: "GET",
         credentials: "include",
+        headers: getAuthHeaders(),
     });
     ensureOk(res);
     return await res.json();
@@ -409,6 +446,7 @@ export async function getRdstDevices() {
     const res = await fetch(`${API_BASE}/rdst-devices`, {
         method: "GET",
         credentials: "include",
+        headers: getAuthHeaders(),
     });
     ensureOk(res);
     return await res.json();
@@ -419,7 +457,7 @@ export async function createVehicle(data: any) {
     const res = await fetch(`${API_BASE}/vehicles`, {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: withAuth({ "Content-Type": "application/json" }),
         body: JSON.stringify(data),
     });
     await handleVehicleError(res);
@@ -430,7 +468,7 @@ export async function editVehicle(id: string, data: any) {
     const res = await fetch(`${API_BASE}/vehicles/${id}/edit`, {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: withAuth({ "Content-Type": "application/json" }),
         body: JSON.stringify(data),
     });
     await handleVehicleError(res);
@@ -442,6 +480,7 @@ export async function getNetworkPointQueue(networkPointId: number) {
     const res = await fetch(`${API_BASE}/network-points/${networkPointId}/queue`, {
         method: "GET",
         credentials: "include",
+        headers: getAuthHeaders(),
     });
     ensureOk(res);
     return await res.json();
@@ -454,6 +493,7 @@ export async function addProviderToQueue(networkPointId: number, providerId: num
 
     const res = await fetch(url.toString(), {
         method: "POST",
+        headers: getAuthHeaders(),
         credentials: "include",
     });
     ensureOk(res);
@@ -463,6 +503,7 @@ export async function removeFromQueue(networkPointId: number, registrationId: nu
     const res = await fetch(`${API_BASE}/network-points/${networkPointId}/queue/${registrationId}`, {
         method: "DELETE",
         credentials: "include",
+        headers: getAuthHeaders(),
     });
     ensureOk(res);
 }
@@ -470,6 +511,7 @@ export async function removeFromQueue(networkPointId: number, registrationId: nu
 export async function promoteNext(networkPointId: number) {
     const res = await fetch(`${API_BASE}/network-points/${networkPointId}/queue/promote-next`, {
         method: "POST",
+        headers: getAuthHeaders(),
         credentials: "include",
     });
     ensureOk(res);
@@ -479,6 +521,7 @@ export async function clearQueue(networkPointId: number) {
     const res = await fetch(`${API_BASE}/network-points/${networkPointId}/queue`, {
         method: "DELETE",
         credentials: "include",
+        headers: getAuthHeaders(),
     });
     ensureOk(res);
 }
@@ -490,6 +533,7 @@ export async function updateRegistrationDates(networkPointId: number, registrati
 
     const res = await fetch(url.toString(), {
         method: "PUT",
+        headers: getAuthHeaders(),
         credentials: "include",
     });
     ensureOk(res);
@@ -499,7 +543,7 @@ export async function reorderQueue(networkPointId: number, registrationIds: numb
     const res = await fetch(`${API_BASE}/network-points/${networkPointId}/queue/reorder`, {
         method: "PUT",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: withAuth({ "Content-Type": "application/json" }),
         body: JSON.stringify(registrationIds),
     });
     ensureOk(res);
@@ -512,7 +556,7 @@ export async function createNetworkPoint(data: any, bypassCapacityCheck: boolean
     const res = await fetch(url.toString(), {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: withAuth({ "Content-Type": "application/json" }),
         body: JSON.stringify(data),
     });
     ensureOk(res);
@@ -527,6 +571,7 @@ export async function uploadCsvFile(file: File) {
     const res = await fetch(`${API_BASE}/api/import`, {
         method: "POST",
         credentials: "include",
+        headers: getAuthHeaders(),
         body: formData,
     });
 

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { API_BASE } from "@/constants/api";
+import { getAuthHeaders } from "@/lib/auth-headers";
 
 export function useVehicleActions() {
     const [archiveOpen, setArchiveOpen] = useState(false);
@@ -10,6 +11,7 @@ export function useVehicleActions() {
         try {
             const res = await fetch(`${API_BASE}/vehicles/${id}/delete`, {
                 method: "POST",
+                headers: getAuthHeaders(),
             });
             if (!res.ok) throw new Error(await res.text());
             return true;
@@ -27,7 +29,10 @@ export function useVehicleActions() {
 
             const res = await fetch(
                 `${API_BASE}/vehicles/${vehicleId}/archive?${params}`,
-                { method: "POST" }
+                {
+                    method: "POST",
+                    headers: getAuthHeaders()
+                }
             );
             if (!res.ok) throw new Error(await res.text());
             return true;
