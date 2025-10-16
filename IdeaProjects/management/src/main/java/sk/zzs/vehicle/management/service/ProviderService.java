@@ -164,6 +164,8 @@ public class ProviderService {
         log.setAddress(provider.getAddress());
         log.setState(provider.getState());
         log.setArchived(provider.isArchived());
+        log.setVehicleCount(vehicleRepository.countByProviderId(provider.getId()));
+        log.setNetworkPointCount(networkPointRepository.countByProviderId(provider.getId()));
 
         log.setAuthor(CurrentUserProvider.getUsernameOrSystem());
         log.setTimestamp(LocalDateTime.now());
@@ -253,7 +255,7 @@ public class ProviderService {
     }
 
     private ProviderState determineState(long vehicleCount, long networkPointCount) {
-        if (vehicleCount == 0 && networkPointCount == 0) {
+        if (vehicleCount == 0 || networkPointCount == 0) {
             return ProviderState.DISABLED;
         }
 

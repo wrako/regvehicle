@@ -27,6 +27,9 @@ public class ProviderLog {
 
     private Boolean archived;
 
+    private Long vehicleCount;
+    private Long networkPointCount;
+
     // audit info
     private String author;
     private LocalDateTime timestamp;

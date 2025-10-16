@@ -39,7 +39,7 @@ import { Badge } from "@/components/ui/badge";
 import { OperationBadge, type OperationType } from "@/components/common";
 import { formatDate } from "@/lib/date";
 import { ProviderLogDto, type ProviderState } from "@/types";
-import { getProviderHistory } from "@/lib/api";
+import { getProviderHistory, getProviderVehicleCount, getProviderNetworkPointCount } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 function formatDateTime(value?: string | Date | null): string {
@@ -193,6 +193,8 @@ export default function ProviderHistoryPage() {
     const [logs, setLogs] = useState<ProviderLogDto[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [vehicleCount, setVehicleCount] = useState<number>(0);
+    const [networkPointCount, setNetworkPointCount] = useState<number>(0);
     const lastIdRef = useRef<string>("");
 
     // Typed filter state
@@ -216,8 +218,14 @@ export default function ProviderHistoryPage() {
 
         (async () => {
             try {
-                const data = await getProviderHistory(id);
+                const [data, vCount, npCount] = await Promise.all([
+                    getProviderHistory(id),
+                    getProviderVehicleCount(id),
+                    getProviderNetworkPointCount(id),
+                ]);
                 setLogs(data);
+                setVehicleCount(vCount);
+                setNetworkPointCount(npCount);
             } catch (e: any) {
                 console.error(e);
                 setError("Nepodarilo sa načítať históriu poskytovateľa.");
@@ -406,6 +414,8 @@ export default function ProviderHistoryPage() {
                                         <TableHead className="hidden md:table-cell">Email</TableHead>
                                         <TableHead className="hidden lg:table-cell">Adresa</TableHead>
                                         <TableHead className="hidden xl:table-cell">Stav</TableHead>
+                                        <TableHead className="hidden xl:table-cell">Vozidlá</TableHead>
+                                        <TableHead className="hidden xl:table-cell">Sieťové body</TableHead>
                                         <TableHead className="hidden xl:table-cell">Archivované</TableHead>
                                     </TableRow>
                                     {/* Typed Filter Row - Always Visible */}
@@ -477,6 +487,12 @@ export default function ProviderHistoryPage() {
                                                 placeholder="Any"
                                             />
                                         </TableHead>
+                                        {/* Vozidlá - No filter (shows current count) */}
+                                        <TableHead className="hidden xl:table-cell py-2">
+                                        </TableHead>
+                                        {/* Sieťové body - No filter (shows current count) */}
+                                        <TableHead className="hidden xl:table-cell py-2">
+                                        </TableHead>
                                         {/* Archivované - Tri-state */}
                                         <TableHead className="hidden xl:table-cell py-2">
                                             <Select
@@ -501,7 +517,7 @@ export default function ProviderHistoryPage() {
                                     {filteredLogs.length === 0 ? (
                                         <TableRow>
                                             <TableCell
-                                                colSpan={8}
+                                                colSpan={10}
                                                 className="h-24 text-center text-muted-foreground"
                                             >
                                                 <div>
@@ -516,7 +532,11 @@ export default function ProviderHistoryPage() {
                                         </TableRow>
                                     ) : (
                                         filteredLogs.map((log) => (
-                                            <TableRow key={log.id}>
+                                            <TableRow
+                                                key={log.id}
+                                                className="cursor-pointer hover:bg-muted/50"
+                                                onClick={() => window.location.href = `/dashboard/providers/${id}/history/${log.id}`}
+                                            >
                                                 <TableCell className="font-medium">
                                                     {formatDateTime(log.timestamp)}
                                                 </TableCell>
@@ -542,6 +562,12 @@ export default function ProviderHistoryPage() {
                                                             {log.state}
                                                         </Badge>
                                                     ) : "-"}
+                                                </TableCell>
+                                                <TableCell className="hidden xl:table-cell">
+                                                    {vehicleCount}
+                                                </TableCell>
+                                                <TableCell className="hidden xl:table-cell">
+                                                    {networkPointCount}
                                                 </TableCell>
                                                 <TableCell className="hidden xl:table-cell">
                                                     {log.archived ? (

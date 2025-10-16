@@ -37,6 +37,8 @@ public class ProviderListener {
         log.setAddress(provider.getAddress());
         log.setState(provider.getState());
         log.setArchived(provider.isArchived());
+        log.setVehicleCount(provider.getVehicles() != null ? (long) provider.getVehicles().size() : 0L);
+        log.setNetworkPointCount(provider.getNetworkPoints() != null ? (long) provider.getNetworkPoints().size() : 0L);
 
         log.setAuthor(CurrentUserProvider.getUsernameOrSystem());
         log.setTimestamp(LocalDateTime.now());

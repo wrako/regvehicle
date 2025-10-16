@@ -568,7 +568,11 @@ export default function NetworkPointHistoryPage() {
                                         </TableRow>
                                     ) : (
                                         filteredLogs.map((log) => (
-                                            <TableRow key={log.id}>
+                                            <TableRow
+                                                key={log.id}
+                                                className="cursor-pointer hover:bg-muted/50"
+                                                onClick={() => window.location.href = `/dashboard/network-points/${id}/history/${log.id}`}
+                                            >
                                                 <TableCell className="font-medium">
                                                     {formatDateTime(log.timestamp)}
                                                 </TableCell>

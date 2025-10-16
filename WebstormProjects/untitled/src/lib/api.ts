@@ -335,6 +335,24 @@ export async function getArchivedProvider(id: number) {
     return await res.json();
 }
 
+export async function getProviderVehicleCount(id: number | string) {
+    const res = await fetch(`${API_BASE}/providers/vehicles/${id}`, {
+        method: "GET",
+        credentials: "include",
+    });
+    ensureOk(res);
+    return await res.json();
+}
+
+export async function getProviderNetworkPointCount(id: number | string) {
+    const res = await fetch(`${API_BASE}/providers/network-point/${id}`, {
+        method: "GET",
+        credentials: "include",
+    });
+    ensureOk(res);
+    return await res.json();
+}
+
 export async function getProviderHistory(id: number | string) {
     const res = await fetch(`${API_BASE}/provider-logs/history/${id}`, {
         method: "GET",

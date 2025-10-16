@@ -131,6 +131,8 @@ export type ProviderLogDto = {
     address?: string;
     state?: ProviderState;
     archived?: boolean;
+    vehicleCount?: number;
+    networkPointCount?: number;
     author: string;
     timestamp: string;
     operation: string;

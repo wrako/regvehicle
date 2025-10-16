@@ -1,0 +1,18 @@
+[Providers],,,,,,,,
+name,email,address,providerId,,,,,
+Alpha Logistics,ops@alpha.example,"Kuku­nova 12, Bratislava ",P006,,,,,
+Nova Transport,hello@nova.example,"Bajkalska 45, Bratislava",P007,,,,,
+Draldiak Fleet,contact@fora.example,"Drielova 3, Bratislava",P008,,,,,
+,,,,,,,,
+[Vehicles],,,,,,,,
+vin_num,brand,model,license_plate,first_registration_date,last_technical_check_date,technical_check_valid_until,provider_id,provider_assignment_end_date
+WAUZZZ8K9BA123456,Audi,A4,BL123XY,5/12/2018,5/10/2025,5/12/2026,P001,5/12/2026
+VF1RFB00012345678,Renault,Traffic,BL456ZZ,3/1/2020,3/1/2025,11/1/2025,P006,3/1/2026
+WDB9066571S123456,Mercedes-Benz,Sprinter,BA987XY,11/20/2019,9/20/2025,11/20/2026,P007,11/20/2026
+JMZBK14Z201234567,Mazda,BT-50,TT112AB,7/7/2017,7/7/2024,9/7/2025,P008,7/7/2026
+,,,,,,,,
+[NetworkPoints],,,,,,,,
+code,name,provider_id,provider_end_date,valid_to,type,,,
+NP-001,Prastavna most Hub,P006,5/12/2026,5/12/2026,RLP,,,
+NP-002,Mliekarenska Depot,P006,3/1/2026,3/1/2026,RV,,,
+NP-003,Kukuata­nova Yard,P007,11/20/2026,11/20/2026,RZP,,,

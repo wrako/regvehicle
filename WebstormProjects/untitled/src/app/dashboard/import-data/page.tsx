@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from 'react';
-import { Upload, FileText, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Upload, FileText, CheckCircle, XCircle, AlertCircle, Download } from 'lucide-react';
 import { uploadCsvFile } from '@/lib/api';
 
 interface SectionResult {
@@ -236,9 +236,19 @@ export default function ImportDataPage() {
 
       {/* Instructions */}
       <div className="bg-muted/50 rounded-lg p-6 space-y-3">
-        <div className="flex items-center gap-2">
-          <FileText className="h-5 w-5 text-muted-foreground" />
-          <h2 className="font-semibold">CSV File Format</h2>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <FileText className="h-5 w-5 text-muted-foreground" />
+            <h2 className="font-semibold">CSV File Format</h2>
+          </div>
+          <a
+            href="/example_import.csv"
+            download="example_import.csv"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-md text-sm font-medium transition-colors"
+          >
+            <Download className="h-4 w-4" />
+            Download Example CSV
+          </a>
         </div>
         <div className="text-sm text-muted-foreground space-y-2">
           <p>The CSV file should contain data for providers, vehicles, and network points.</p>
